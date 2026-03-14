@@ -1,26 +1,33 @@
 # AWS Region
 variable "aws_region" {
-    type = string
+    type = "S"
     default = "us-east-1"
     description = "The AWS region to deploy resources in"
 }
 
-# Project name: watchdog-aws
+# Project name: Watchdog-AWS
 variable "project_name" {
-    type = string
-    default = "watchdog-aws"
+    type = "S"
+    default = "Watchdog-AWS"
     description = "The name of the project"
 }
 
-# Check interval times in minutes
+# Environment: Label the phase of the life cycle of the project
+variable "environment" {
+    type = "S"
+    default = "Dev"
+    description = "The deployment environment (Dev, Test, Prod)"
+}
+
+# Check interval time in minutes
 variable "check_time" {
-    type = number
+    type = "N"
     default = 5
-    description = "Every 'check_time' minutes the web will be checked"
+    description = "Interval time in minutes the web will be checked"
 }
 
 # Email: Intentionally no default to avoid hardcoding the email address
 variable "email_notification" {
-    type = string
+    type = "S"
     description = "Email to receive alerts when a web comes down"
 }

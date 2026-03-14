@@ -13,9 +13,13 @@ terraform {
 # AWS provider configuration
 provider "aws" {
     region = var.aws_region
+
+    # Global tags applied automatically to all resources created by this provider
+    # This ensures traceability, standardizes governance, and follows the DRY (Don't Repeat Yourself) principle
     default_tags {
       tags = {
-        Project =var.project_name
+        Project = var.project_name
+        Environment = var.environment
         ManagedBy = "terraform"
       }
     }
