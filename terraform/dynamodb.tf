@@ -1,4 +1,4 @@
-# Creation of DynamoDB table
+# DynamoDB Table
 
 resource "aws_dynamodb_table" "dynamodb_table" {
     name = "watchdogdb"
@@ -25,11 +25,25 @@ resource "aws_dynamodb_table" "dynamodb_table" {
       type = "N"
     }
 
-    # Global Secondary Index (GSI)
+    # Name of the web
+    attribute {
+      name = "name"
+      type = "N"
+    }
+
+    # Global Secondary Index (GSI) StatusIndex: To search by status code
     global_secondary_index {
       name = "StatusIndex"
       hash_key = "status"       # Partition key of GSI
       range_key = "timestamp"   # Sort key of GSI
       projection_type = "ALL"   # Projects every attribute into the index 
+    }
+
+    # Global Secondary Index (GSI) NameIndex: To search by name
+    global_secondary_index {
+      name = "NameIndex"
+      hash_key = "name"         # Partition key of GSI
+      range_key = "timestamp"   # Sort key of GSI
+      projection_type = "ALL"   # Projects every attribute into the index
     }
 }
