@@ -24,7 +24,7 @@ resource "aws_iam_role" "lambda_role" {
 # Permissions: CloudWatch Logs
 resource "aws_iam_role_policy_attachment" "lambda_logs" {
     role = aws_iam_role.lambda_role.name
-    policy_arn = "rn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
+    policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
 }
 
 # Custom policies
@@ -41,11 +41,11 @@ resource "aws_iam_role_policy" "lambda_dynamodb" {
                 Action = [
                     "dynamodb:PutItem",
                     "dynamodb:GetItem",
-                    "dynamodb:Updateitem",
+                    "dynamodb:UpdateItem",
                     "dynamodb:Scan",
                     "dynamodb:Query"
                 ]
-                Resource = aws_dynamodb_table.websites.arn
+                Resource = aws_dynamodb_table.websites_table.arn
             }
         ]
     })
@@ -56,7 +56,7 @@ resource "aws_iam_role_policy" "lambda_sns" {
   name = "${var.project_name}-lambda-sns"
   role = aws_iam_role.lambda_role.id
 
-  policy = jsondecode({
+  policy = jsonencode({
     Version = "2012-10-17"
     Statement = [
         {
