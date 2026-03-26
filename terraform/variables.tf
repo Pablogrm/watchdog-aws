@@ -8,7 +8,7 @@ variable "aws_region" {
 # Project name: Watchdog-AWS
 variable "project_name" {
     type = string
-    default = "Watchdog-AWS"
+    default = "watchdog"
     description = "The name of the project"
 }
 
