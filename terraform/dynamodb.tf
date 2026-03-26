@@ -1,7 +1,7 @@
 # DynamoDB Table
 
-resource "aws_dynamodb_table" "websites" {
-    name = "${var.project_name}-websites-db"
+resource "aws_dynamodb_table" "websites_table" {
+    name = "${var.project_name}-websites-table"
     billing_mode = "PAY_PER_REQUEST" # On-Demand
     hash_key = "url"                 
     range_key = "timestamp"          

@@ -2,7 +2,7 @@
 
 # Topic for Watchdog alerts
 resource "aws_sns_topic" "watchdog_alerts" {
-    name = "${var.project_name}-alerts-topic"
+    name = "${var.project_name}-downtime-alerts-topic"
 }
 
 # Email subscription for the topic
