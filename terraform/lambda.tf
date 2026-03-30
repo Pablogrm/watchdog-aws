@@ -5,7 +5,7 @@ data "archive_file" "code_zip" {
 }
 
 resource "aws_lambda_function" "lambda-watchdog" {
-  function_name = "${var.project_name}-health-checker-lambda"
+  function_name = "lamdba-watchdog"
   role = data.aws_iam_role.lab_role.arn
   filename = data.archive_file.code_zip.output_path
   handler = "watchdog.lambda_handler"
