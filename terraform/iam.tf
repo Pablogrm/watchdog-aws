@@ -1,7 +1,7 @@
 # Role for all the lambdas
 
 resource "aws_iam_role" "lambda_role" {
-    name = "${var.project_name}-lambda-role"
+    name = "${var.project_name}-lambda-execution-role"
 
     # Trust policy (who can use this role)
     assume_role_policy = jsonencode({
@@ -30,7 +30,7 @@ resource "aws_iam_role_policy_attachment" "lambda_logs" {
 # Custom policies
 # Permissions: DynamoDB
 resource "aws_iam_role_policy" "lambda_dynamodb" {
-    name = "${var.project_name}-lambda-dynamodb"
+    name = "${var.project_name}-dynamodb-policy"
     role = aws_iam_role.lambda_role.id
 
     policy = jsonencode({
@@ -53,7 +53,7 @@ resource "aws_iam_role_policy" "lambda_dynamodb" {
 
 # Permissions: SNS
 resource "aws_iam_role_policy" "lambda_sns" {
-  name = "${var.project_name}-lambda-sns"
+  name = "${var.project_name}-sns-policy"
   role = aws_iam_role.lambda_role.id
 
   policy = jsonencode({
