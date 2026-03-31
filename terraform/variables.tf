@@ -1,33 +1,37 @@
-# AWS Region
+#---------------------------------------------------------------
+#                         VARIABLES
+#---------------------------------------------------------------
+
+# Región de AWS
 variable "aws_region" {
     type = string
     default = "us-east-1"
     description = "The AWS region to deploy resources in"
 }
 
-# Project name: Watchdog-AWS
+# Nombre del Proyecto: Watchdog-AWS
 variable "project_name" {
     type = string
     default = "watchdog"
-    description = "The name of the project"
+    description = "Nombre del Proyecto"
 }
 
-# Environment: Label the phase of the life cycle of the project
+# Environment: Fase del Ciclo de Vida del proyecto
 variable "environment" {
     type = string
     default = "Dev"
-    description = "The deployment environment (Dev, Test, Prod)"
+    description = "El entorno de despliegue (Dev, Test, Prod)"
 }
 
-# Check interval time in minutes
+# Intervalo de tiempo en minutos para chequear una página web
 variable "check_time" {
     type = number
     default = 5
-    description = "Interval time in minutes the web will be checked"
+    description = "Intervalo de tiempo en minutos para chequear una página web"
 }
 
-# Email: Intentionally no default to avoid hardcoding the email address
+# Email: No se especifica ningún valor predeterminado para evitar hardcodear la dirección de correo electrónico
 variable "email_notification" {
     type = string
-    description = "Email to receive alerts when a web comes down"
+    description = "Email para recibir las alertas cuando una página web cae"
 }

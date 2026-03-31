@@ -1,3 +1,8 @@
+#---------------------------------------------------------------
+#                          MAIN
+#---------------------------------------------------------------
+
+
 # Terraform configuration for AWS infrastructure
 terraform {
     required_version = ">= 1.14.0"

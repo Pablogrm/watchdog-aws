@@ -1,7 +1,23 @@
-# DynamoDB Table
+#---------------------------------------------------------------
+#                         DYNAMODB
+#---------------------------------------------------------------
 
-resource "aws_dynamodb_table" "websites_table" {
-    name = "${var.project_name}-websites-table"
+# Tabla de Inventario: Contiene las webs que se van a chequear
+resource "aws_dynamodb_table" "websites_inventory" {
+  name = "${var.project_name}-websites-inventory-table"
+  billing_mode = "PAY_PER_REQUEST" # On-Demand
+  hash_key = "url"               
+
+  attribute {
+    name = "url"
+    type = "S"
+  }
+}
+
+
+# Tabla de Logs: Contiene todos los chequeos de las paginas webs
+resource "aws_dynamodb_table" "websites_logs" {
+    name = "${var.project_name}-websites-logs-table"
     billing_mode = "PAY_PER_REQUEST" # On-Demand
     hash_key = "url"                 
     range_key = "timestamp"          
@@ -47,3 +63,4 @@ resource "aws_dynamodb_table" "websites_table" {
       projection_type = "ALL"   # Projects every attribute into the index
     }
 }
+
