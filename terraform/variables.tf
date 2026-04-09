@@ -23,11 +23,11 @@ variable "environment" {
     description = "El entorno de despliegue (Dev, Test, Prod)"
 }
 
-# Intervalo de tiempo en minutos para chequear una página web
+# Frecuencia en minutos para chequear una página web
 variable "check_time" {
     type = number
     default = 5
-    description = "Intervalo de tiempo en minutos para chequear una página web"
+    description = "Frecuencia en minutos para ejecutar el Watchdog"
 }
 
 # Email: No se especifica ningún valor predeterminado para evitar hardcodear la dirección de correo electrónico

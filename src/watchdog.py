@@ -24,7 +24,11 @@ logger.setLevel(logging.INFO)
 # Funcion que realiza un ping a una web
 def check_website(url, name):
     actual_time = datetime.now(datetime.timezone.utc).isoformat()
-    # We start the time before the request
+
+    # Calculamos el TTL (7 días en el futuro en formato Unix Epoch): 7 días * 24h * 60m * 60s = 604800 segundos
+    expiration_date = int(time.time()) + 604800
+
+    # Empezamos a contar el tiempo de latencia
     start_time = time.perf_counter()
     req = Request(url)  
     try:
@@ -46,7 +50,8 @@ def check_website(url, name):
             "nombre": name,
             "status": code,
             "latencia": latency_ms,
-            "mensaje_http": f"{code} {reason}"
+            "mensaje_http": f"{code} {reason}",
+            "expiration": expiration_date
         }
     
     except HTTPError as e:
@@ -60,7 +65,8 @@ def check_website(url, name):
             "nombre": name,
             "status": e.code,
             "latencia": latency_ms,
-            "mensaje_http": f"{e.code} {e.reason}"
+            "mensaje_http": f"{e.code} {e.reason}",
+            "expiration": expiration_date
         }
 
     except URLError as e:
@@ -74,7 +80,8 @@ def check_website(url, name):
             "nombre": name,
             "status": 0,
             "latencia": latency_ms,
-            "mensaje_http": f"Conexion fallida: {e.reason}"
+            "mensaje_http": f"Conexion fallida: {e.reason}",
+            "expiration": expiration_date
         }
 
 
@@ -194,6 +201,13 @@ def lambda_handler(event, context):
     websites_to_check = get_websites_to_check()
 
     for web in websites_to_check:
+
+        # Comprobamos si la web está activa
+        # Usamos get('activa', True) por si el atributo no existe, asuma que sí está activa por defecto.
+        if web.get('activa', True) == False:
+            logger.info(f"Saltando {web.get('nombre', 'la web')}: La monitorización está pausada.")
+            continue # Salta directamente a la siguiente web del bucle
+
         logger.info(f"Chequeando: {web['nombre']}...")
 
         # Hacemos el ping
