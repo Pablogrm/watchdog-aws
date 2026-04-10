@@ -26,6 +26,14 @@ def lambda_handler(event, context):
         'Access-Control-Allow-Methods': 'OPTIONS,POST,GET,DELETE'
     }
 
+    # Atendemos primero al OPTIONS de CORS
+    if http_method == 'OPTIONS':
+        return {
+            'statusCode': 200,
+            'headers': headers,
+            'body': ''
+        }
+    
     try:
         # RUTA: /webs (Gestión de Inventario)
         if path == '/webs':

@@ -16,11 +16,11 @@ variable "project_name" {
     description = "Nombre del Proyecto"
 }
 
-# Environment: Fase del Ciclo de Vida del proyecto
-variable "environment" {
+# Entorno: Fase del Ciclo de Vida del proyecto
+variable "stage" {
     type = string
-    default = "Dev"
-    description = "El entorno de despliegue (Dev, Test, Prod)"
+    default = "prod"
+    description = "El entorno de despliegue de la infraestructura (dev, test, prod)"
 }
 
 # Frecuencia en minutos para chequear una página web
