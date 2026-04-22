@@ -47,16 +47,16 @@ resource "aws_dynamodb_table" "websites_logs" {
     # 2. Key attribute requerido para el GSI
     # HTTP status code
     attribute {
-      name = "status"
-      type = "N"
+      name = "health_status"
+      type = "S"
     }
 
-    # Global Secondary Index (GSI) StatusIndex: Para buscar por status code
+    # Global Secondary Index (GSI) StatusIndex: Para buscar por status distinto a 200 -> ERRORES
     global_secondary_index {
       name = "StatusIndex"
-      hash_key = "status"       # Partition key de GSI
-      range_key = "timestamp"   # Sort key de GSI
-      projection_type = "ALL"   # Proyecta todos los atributos en el index 
+      hash_key = "health_status"  # Partition key de GSI
+      range_key = "timestamp"     # Sort key de GSI
+      projection_type = "ALL"     # Proyecta todos los atributos en el index 
     }
 }
 

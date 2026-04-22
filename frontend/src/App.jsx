@@ -1,25 +1,22 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import Login from './components/Login';
 import Dashboard from './components/Dashboard';
+import Logs from './components/Logs';
 
 function App() {
   return (
     <BrowserRouter>
-      {/* Routes es la caja donde definimos todos los caminos posibles */}
       <Routes>
-          
-        {/* Ruta 1: Si el usuario entra a la raíz ("/") lo expulsamos al login */}
+        {/* Ruta por defecto redirige a login */}
         <Route path="/" element={<Navigate to="/login" replace />} />
         
-        {/* Ruta 2: La pantalla de Login */}
+        {/* Pantallas de la App */}
         <Route path="/login" element={<Login />} />
-        
-        {/* Ruta 3: La pantalla del panel de control */}
         <Route path="/dashboard" element={<Dashboard />} />
-          
+        <Route path="/logs" element={<Logs />} />
       </Routes>
     </BrowserRouter>
-  )
+  );
 }
 
-export default App
+export default App;

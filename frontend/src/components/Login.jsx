@@ -1,35 +1,45 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
+// 1. IMPORTACIÓN: Traemos la imagen al componente. 
+// ¡ATENCIÓN! Cambia 'fondo-login.jpg' por el nombre exacto y extensión de tu foto.
+import loginImage from '../assets/background.png';
+
 function Login() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  
-  // Activamos el navegador
   const navigate = useNavigate(); 
 
   const manejarEnvio = (evento) => {
     evento.preventDefault();
-    console.log("Iniciando sesión con:", email, password);
-    
-    // Redireccionamos al dashboard (aquí iría la lógica de autenticación)
     navigate('/dashboard'); 
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50">
-      <div className="max-w-md w-full bg-white rounded-xl shadow-lg p-8 space-y-6">
+    // 2. FONDO: Aplicamos la imagen importada usando la etiqueta style.
+    // Usamos Tailwind (bg-cover, bg-center) para que la foto se adapte a cualquier pantalla.
+    <div 
+      className="min-h-screen flex items-center justify-center bg-gray-900 bg-cover bg-center bg-no-repeat relative"
+      style={{ backgroundImage: `url(${loginImage})` }}
+    >
+      
+
+      {/* TARJETA DE LOGIN: Le añadimos 'relative z-10' para que flote por encima del filtro oscuro */}
+      <div className="relative z-10 max-w-md w-full bg-gray-800 rounded-xl shadow-2xl p-8 space-y-6 border border-gray-700">
         <div className="text-center">
-          <h2 className="text-3xl font-extrabold text-gray-900">Login</h2>
-          <p className="mt-2 text-sm text-gray-500">Serverless Watchdog</p>
+          <h2 className="text-3xl font-extrabold text-white tracking-wide">
+            Serverless <span className="text-orange-500">Watchdog</span>
+          </h2>
+          <p className="mt-2 text-sm text-gray-400 font-medium tracking-widest">Login</p>
         </div>
 
-        <form onSubmit={manejarEnvio} className="space-y-5">
+        <form onSubmit={manejarEnvio} className="space-y-5 mt-8">
           <div>
-            <label className="block text-sm font-medium text-gray-700">Email</label>
+            <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Email</label>
             <input 
               type="email" 
-              className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              required
+              className="w-full px-4 py-3 bg-gray-900 border border-gray-700 rounded-lg text-white focus:outline-none focus:border-orange-500 transition-colors"
               placeholder="admin@empresa.com"
               value={email}
               onChange={(e) => setEmail(e.target.value)} 
@@ -37,11 +47,12 @@ function Login() {
           </div>
           
           <div>
-            <label className="block text-sm font-medium text-gray-700">Password</label>
+            <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Password</label>
             <input 
               type="password" 
-              className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              placeholder="********"
+              required
+              className="w-full px-4 py-3 bg-gray-900 border border-gray-700 rounded-lg text-white focus:outline-none focus:border-orange-500 transition-colors"
+              placeholder="••••••••"
               value={password}
               onChange={(e) => setPassword(e.target.value)} 
             />
@@ -49,9 +60,9 @@ function Login() {
 
           <button 
             type="submit" 
-            className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 transition-colors"
+            className="w-full flex justify-center py-3 px-4 border border-transparent rounded-lg shadow-sm text-sm font-bold text-white bg-orange-600 hover:bg-orange-500 transition-colors mt-4"
           >
-            Enter
+            Access Dashboard
           </button>
         </form>
       </div>

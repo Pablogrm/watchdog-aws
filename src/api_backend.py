@@ -49,7 +49,7 @@ def lambda_handler(event, context):
             # 2. POST: Añadir una web nueva
             elif http_method == 'POST':
                 body = json.loads(event.get('body', '{}'))
-                TABLE_INVENTORY.put_item(Item={'url': body['url'], 'nombre': body['nombre'], 'activa': True})
+                TABLE_INVENTORY.put_item(Item={'url': body['url'], 'nombre': body['nombre']})
                 return {
                     'statusCode': 201,
                     'headers': headers,
@@ -60,9 +60,10 @@ def lambda_handler(event, context):
             elif http_method == 'DELETE':
                 url_to_delete = query_params.get('url')
                 if not url_to_delete:
-                    return {'statusCode': 400,
-                            'headers': headers, 
-                            'body': json.dumps({'error': 'Falta la URL a borrar'})
+                    return {
+                        'statusCode': 400,
+                        'headers': headers, 
+                        'body': json.dumps({'error': 'Falta la URL a borrar'})
                     }
                 
                 TABLE_INVENTORY.delete_item(Key={'url': url_to_delete})
@@ -80,7 +81,7 @@ def lambda_handler(event, context):
             # 1. GET
             if http_method == 'GET':
                 url_filter = query_params.get('url')
-                status_filter = query_params.get('status')
+                status_filter = query_params.get('health_status')
 
                 # CASO 1: Filtrando por URL específica
                 if url_filter:
@@ -89,12 +90,12 @@ def lambda_handler(event, context):
                         KeyConditionExpression=Key('url').eq(url_filter)
                     )
 
-                # CASO 2: Filtrando por status, usamos el GSI (StatusIndex)
+                # CASO 2: Filtrando por health_status, usamos el GSI (StatusIndex)
                 elif status_filter:
-                    logger.info(f"Filtrando logs por status {status_filter} usando GSI.")
+                    logger.info(f"Filtrando logs por health_status (OK/ERROR): {status_filter} usando GSI.")
                     response = TABLE_LOGS.query(
                         IndexName='StatusIndex',
-                        KeyConditionExpression=Key('status').eq(int(status_filter))
+                        KeyConditionExpression=Key('health_status').eq(status_filter)
                     )
 
                 # CASO 3: Si no hay filtro devolvemos todos los logs

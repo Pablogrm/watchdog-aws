@@ -51,7 +51,8 @@ def check_website(url, name):
             "status": code,
             "latencia": latency_ms,
             "mensaje_http": f"{code} {reason}",
-            "expiration": expiration_date
+            "expiration": expiration_date,
+            "health_status": "OK"
         }
     
     except HTTPError as e:
@@ -66,7 +67,8 @@ def check_website(url, name):
             "status": e.code,
             "latencia": latency_ms,
             "mensaje_http": f"{e.code} {e.reason}",
-            "expiration": expiration_date
+            "expiration": expiration_date,
+            "health_status": "ERROR"
         }
 
     except URLError as e:
@@ -81,7 +83,8 @@ def check_website(url, name):
             "status": 0,
             "latencia": latency_ms,
             "mensaje_http": f"Conexion fallida: {e.reason}",
-            "expiration": expiration_date
+            "expiration": expiration_date,
+            "health_status": "ERROR"
         }
 
 
@@ -96,7 +99,8 @@ def save_to_dynamodb(data):
             'nombre': data['nombre'],
             'status': data['status'],
             'latencia': data['latencia'],
-            'mensaje_http': data['mensaje_http']
+            'mensaje_http': data['mensaje_http'],
+            'health_status': data['health_status']
             }
         )
 
@@ -201,12 +205,6 @@ def lambda_handler(event, context):
     websites_to_check = get_websites_to_check()
 
     for web in websites_to_check:
-
-        # Comprobamos si la web está activa
-        # Usamos get('activa', True) por si el atributo no existe, asuma que sí está activa por defecto.
-        if web.get('activa', True) == False:
-            logger.info(f"Saltando {web.get('nombre', 'la web')}: La monitorización está pausada.")
-            continue # Salta directamente a la siguiente web del bucle
 
         logger.info(f"Chequeando: {web['nombre']}...")
 
