@@ -2,9 +2,10 @@ import { useState, useEffect } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 
-// 1. IMPORTACIÓN: Asegúrate de que el nombre coincida con tu archivo en assets
+
 import logsImage from '../assets/fondo.png'; 
 
+// ---> CAMBIAR ESTO POR LA URL DE TU API GATEWAY <---
 const API_URL = 'https://TU_API_ID.execute-api.us-east-1.amazonaws.com/prod';
 
 function Logs() {
@@ -35,16 +36,13 @@ function Logs() {
   }, [healthFilter]);
 
   return (
-    // 2. CONTENEDOR CON IMAGEN: Aplicamos el fondo fijo y centrado
     <div 
       className="min-h-screen bg-gray-900 bg-cover bg-center bg-no-repeat bg-fixed relative font-sans text-gray-100"
       style={{ backgroundImage: `url(${logsImage})` }}
     >
       
-      {/* 3. CAPA DE CONTRASTE: Filtro oscuro (90%) para máxima legibilidad de la tabla */}
       <div className="absolute inset-0 bg-gray-900/50"></div>
 
-      {/* 4. CONTENIDO: Elevado con z-10 sobre el fondo */}
       <div className="relative z-10 p-8">
         
         <div className="mb-8">

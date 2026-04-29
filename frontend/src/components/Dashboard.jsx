@@ -4,7 +4,7 @@ import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContai
 import axios from 'axios';
 import dashboardImage from '../assets/fondo.png'; 
 
-// ---> CAMBIA ESTO POR LA URL DE TU API GATEWAY <---
+// ---> CAMBIAR ESTO POR LA URL DE TU API GATEWAY <---
 const API_URL = 'https://TU_API_ID.execute-api.us-east-1.amazonaws.com/prod';
 
 function Dashboard() {
@@ -165,7 +165,7 @@ function Dashboard() {
           </div>
         </div>
 
-        {/* INVENTORY TABLE - 100% SIMPLE */}
+        {/* INVENTORY TABLE */}
         <div ref={inventoryRef} className="bg-gray-800/90 border border-gray-600 rounded-xl shadow-2xl overflow-hidden scroll-mt-10 relative mb-10">
           <div className="px-8 py-6 border-b border-gray-600 bg-gray-900/40 flex justify-between items-center">
             <div>

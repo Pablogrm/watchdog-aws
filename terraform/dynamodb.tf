@@ -2,6 +2,7 @@
 #                         DYNAMODB
 #---------------------------------------------------------------
 
+
 # Tabla de Inventario
 # Contiene las webs que se van a chequear
 resource "aws_dynamodb_table" "websites_inventory" {
