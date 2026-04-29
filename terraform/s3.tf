@@ -18,14 +18,8 @@ data "aws_iam_policy_document" "watchdog_bucket_policy_allow_cloudfront" {
         resources = ["${aws_s3_bucket.watchdog_bucket.arn}/*"]
 
         principals {
-            type = "Service"
-            identifiers = ["cloudfront.amazonaws.com"]
-        }
-
-        condition {
-            test = "StringEquals"
-            variable = "AWS:SourceArn"
-            values = [aws_cloudfront_distribution.watchdog_cloudfront_distribution.arn]
+            type = "AWS"
+            identifiers = [aws_cloudfront_origin_access_identity.watchdog_oai.iam_arn]
         }
     }
 }

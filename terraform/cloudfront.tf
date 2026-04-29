@@ -2,24 +2,22 @@
 #                       CLOUDFRONT
 #---------------------------------------------------------------
 
-
-# Origin Access Control (OAC) para permitir que CloudFront acceda al bucket S3 de forma segura, evitando exponer el bucket públicamente
-resource "aws_cloudfront_origin_access_control" "watchdog_oac" {
-    name = "watchdog-oac"
-    description = "Origin Access Control para permitir que CloudFront acceda al bucket S3"
-    origin_access_control_origin_type = "s3"
-    signing_behavior = "always"
-    signing_protocol = "sigv4"
+# Usamos Origin Access Identity (OAI) para que Cloudfront pueda acceder al bucket de S3 de forma segura sin exponerlo públicamente
+# No podemos usar OAC debido al uso de una cuenta de laboratorio aws academy, cuya configuración no permite crear OACs, por lo que usamos OAI que es compatible con cualquier cuenta de AWS
+resource "aws_cloudfront_origin_access_identity" "watchdog_oai" {
+    comment = "OAI para que Cloudfront acceda al bucket de S3"
 }
-
 
 # CloudFront Distribution para servir el contenido del bucket S3 
 resource "aws_cloudfront_distribution" "watchdog_cloudfront_distribution" {
     # Configuración del Origen (Conexión con el Bucket de S3)
     origin {
         domain_name = aws_s3_bucket.watchdog_bucket.bucket_regional_domain_name
-        origin_access_control_id = aws_cloudfront_origin_access_control.watchdog_oac.id
         origin_id = aws_s3_bucket.watchdog_bucket.id
+
+        s3_origin_config {
+          origin_access_identity = aws_cloudfront_origin_access_identity.watchdog_oai.cloudfront_access_identity_path
+        }
     }
 
     enabled = true
