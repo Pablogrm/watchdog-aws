@@ -1,5 +1,9 @@
-# Role for all the lambdas
+#---------------------------------------------------------------
+#                           IAM
+#---------------------------------------------------------------
 
+
+# Rol para la función Lambda, con permisos para escribir en DynamoDB, publicar en SNS y escribir logs en CloudWatch
 resource "aws_iam_role" "lambda_role" {
     name = "${var.project_name}-lambda-execution-role"
 
@@ -18,17 +22,17 @@ resource "aws_iam_role" "lambda_role" {
     })
 }
 
-# Attached Policies
-
-# Pre-configured policy
-# Permissions: CloudWatch Logs
+# Políticas
+# --------------------------------------------------------------------
+# Políticas gestionadas por AWS (AWS Managed Policies)
+# Permisos básicos para que Lambda pueda escribir logs en CloudWatch
 resource "aws_iam_role_policy_attachment" "lambda_logs" {
     role = aws_iam_role.lambda_role.name
     policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
 }
 
-# Custom policies
-# Permissions: DynamoDB
+# Políticas personalizadas (Custom Policies)
+# Permisos para acceder a DynamoDB
 resource "aws_iam_role_policy" "lambda_dynamodb" {
     name = "${var.project_name}-dynamodb-policy"
     role = aws_iam_role.lambda_role.id
@@ -42,16 +46,24 @@ resource "aws_iam_role_policy" "lambda_dynamodb" {
                     "dynamodb:PutItem",
                     "dynamodb:GetItem",
                     "dynamodb:UpdateItem",
+                    "dynamodb:DeleteItem",
                     "dynamodb:Scan",
                     "dynamodb:Query"
                 ]
-                Resource = aws_dynamodb_table.websites_table.arn
+                Resource = [ 
+                    # Tabla de inventario
+                    aws_dynamodb_table.websites_inventory.arn,
+
+                    # Tabla de logs + índices para poder filtrar por GSI
+                    aws_dynamodb_table.websites_logs.arn,
+                    "${aws_dynamodb_table.websites_logs.arn}/index/*"
+                ]    
             }
         ]
     })
 }
 
-# Permissions: SNS
+# Permisos para publicar en SNS (enviar alertas por email)
 resource "aws_iam_role_policy" "lambda_sns" {
   name = "${var.project_name}-sns-policy"
   role = aws_iam_role.lambda_role.id

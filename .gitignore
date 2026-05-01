@@ -22,3 +22,6 @@ Thumbs.db
 *.pem
 *.key
 credentials*
+
+# env files
+.env

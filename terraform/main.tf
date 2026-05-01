@@ -1,4 +1,9 @@
-# Terraform configuration for AWS infrastructure
+#---------------------------------------------------------------
+#                          MAIN
+#---------------------------------------------------------------
+
+
+# Configuración de Terraform para la infraestructura AWS 
 terraform {
     required_version = ">= 1.14.0"
 
@@ -10,16 +15,15 @@ terraform {
     }
 }
 
-# AWS provider configuration
+# Configuración del proveedor AWS
 provider "aws" {
     region = var.aws_region
 
-    # Global tags applied automatically to all resources created by this provider
-    # This ensures traceability, standardizes governance, and follows the DRY (Don't Repeat Yourself) principle
+    # Tags globales que se aplicarán automaticamente a todos los recursos creados por este proveedor
     default_tags {
       tags = {
         Project = var.project_name
-        Environment = var.environment
+        Environment = var.stage
         ManagedBy = "terraform"
       }
     }
