@@ -6,7 +6,7 @@
 
 # Tema para las alertas lanzadas por el sistema Watchdog
 resource "aws_sns_topic" "watchdog_alerts" {
-    name = "${var.project_name}-downtime-alerts-topic"
+    name = "${var.project_name}-alerts-topic"
 }
 
 # Subscripción de email para el tema

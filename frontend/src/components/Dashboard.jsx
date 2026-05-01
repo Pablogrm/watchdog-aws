@@ -4,8 +4,7 @@ import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContai
 import axios from 'axios';
 import dashboardImage from '../assets/fondo.png'; 
 
-// ---> CAMBIAR ESTO POR LA URL DE TU API GATEWAY <---
-const API_URL = 'https://TU_API_ID.execute-api.us-east-1.amazonaws.com/prod';
+const API_URL = import.meta.env.VITE_API_URL
 
 function Dashboard() {
   const navigate = useNavigate();

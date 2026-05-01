@@ -2,11 +2,9 @@ import { useState, useEffect } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 
-
 import logsImage from '../assets/fondo.png'; 
 
-// ---> CAMBIAR ESTO POR LA URL DE TU API GATEWAY <---
-const API_URL = 'https://TU_API_ID.execute-api.us-east-1.amazonaws.com/prod';
+const API_URL = import.meta.env.VITE_API_URL
 
 function Logs() {
   const navigate = useNavigate();
