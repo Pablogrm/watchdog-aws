@@ -1,13 +1,17 @@
-#---------------------------------------------------------------
+# ====================================================================
 #                           IAM
-#---------------------------------------------------------------
+# ====================================================================
 
 
-# Rol para la función Lambda, con permisos para escribir en DynamoDB, publicar en SNS y escribir logs en CloudWatch
+# ====================================================================
+# 1. ROLES DE EJECUCIÓN (Trust Policies)
+# Define QUÉ servicios de AWS están autorizados a asumir estos roles
+# ====================================================================
+# Rol principal para las funciones Lambda
 resource "aws_iam_role" "lambda_role" {
-    name = "${var.project_name}-lambda-role"
+    name = "lambda-role"
 
-    # Trust policy (who can use this role)
+    # Política de confianza: Permite estrictamente al servicio Lambda asumir este rol
     assume_role_policy = jsonencode({
         Version = "2012-10-17"
         Statement = [
@@ -22,19 +26,46 @@ resource "aws_iam_role" "lambda_role" {
     })
 }
 
-# Políticas
-# --------------------------------------------------------------------
-# Políticas gestionadas por AWS (AWS Managed Policies)
+# Rol específico para EventBridge Scheduler
+resource "aws_iam_role" "scheduler_role" {
+    name = "eventbridge-scheduler-role"
+
+    # Política de confianza: Permite estrictamente al servicio Scheduler asumir este rol
+    assume_role_policy = jsonencode({
+        Version = "2012-10-17"
+        Statement = [
+        {
+            Action = "sts:AssumeRole"
+            Effect = "Allow"
+            Principal = {
+                Service = "scheduler.amazonaws.com"
+            }
+        }
+        ]
+    })
+}
+
+
+# ====================================================================
+# 2. POLÍTICAS DE PERMISOS (Permissions Policies)
+# Define qué acciones específicas pueden realizar los roles creados
+# ====================================================================
+
+# --- 2.1 Políticas Gestionadas (AWS Managed Policies) ---
+# Se utiliza un 'attachment' para enlazar una política global preexistente de AWS.
+
 # Permisos básicos para que Lambda pueda escribir logs en CloudWatch
 resource "aws_iam_role_policy_attachment" "lambda_logs" {
     role = aws_iam_role.lambda_role.name
     policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
 }
 
-# Políticas personalizadas (Custom Policies)
-# Permisos para acceder a DynamoDB
+# --- 2.2 Políticas en Línea (Inline Policies) ---
+# Se utiliza 'aws_iam_role_policy' para incrustar la política directamente dentro del rol sin crear una política independiente.
+
+# Permisos para leer y escribir en las tablas de DynamoDB
 resource "aws_iam_role_policy" "lambda_dynamodb" {
-    name = "${var.project_name}-lambda-dynamodb"
+    name = "lambda-dynamodb-policy"
     role = aws_iam_role.lambda_role.id
 
     policy = jsonencode({
@@ -51,10 +82,10 @@ resource "aws_iam_role_policy" "lambda_dynamodb" {
                     "dynamodb:Query"
                 ]
                 Resource = [ 
-                    # Tabla de inventario
+                    # Acceso a la tabla de inventario
                     aws_dynamodb_table.websites_inventory.arn,
 
-                    # Tabla de logs + índices para poder filtrar por GSI
+                    # Acceso a la tabla de logs y índices secundarios globales (GSI)
                     aws_dynamodb_table.websites_logs.arn,
                     "${aws_dynamodb_table.websites_logs.arn}/index/*"
                 ]    
@@ -63,9 +94,9 @@ resource "aws_iam_role_policy" "lambda_dynamodb" {
     })
 }
 
-# Permisos para publicar en SNS (enviar alertas por email)
+# Permisos para publicar alertas de caída de servicio en el topic de SNS (enviar alertas por email)
 resource "aws_iam_role_policy" "lambda_sns" {
-  name = "${var.project_name}-lambda-sns"
+  name = "lambda-sns-policy"
   role = aws_iam_role.lambda_role.id
 
   policy = jsonencode({
@@ -78,4 +109,21 @@ resource "aws_iam_role_policy" "lambda_sns" {
         }
     ]
   })
+}
+
+# Permisos para que EventBridge Scheduler pueda invocar la función Lambda Watchdog
+resource "aws_iam_role_policy" "scheduler_invoke_policy"{
+    name = "scheduler-invoke-lambda-policy"
+    role = aws_iam_role.scheduler_role.id
+
+    policy = jsonencode({
+        Version = "2012-10-17"
+        Statement = [
+            {
+                Effect = "Allow"
+                Action = "lambda:InvokeFunction"
+                Resource = aws_lambda_function.lambda_watchdog.arn
+            }
+        ]
+    })
 }

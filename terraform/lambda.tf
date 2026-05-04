@@ -24,12 +24,15 @@ resource "aws_lambda_function" "lambda_watchdog" {
   handler = "watchdog.lambda_handler"
   runtime = "python3.10"
   source_code_hash = data.archive_file.watchdog_zip.output_base64sha256   # Para actualizar los archivos zip cuando cambie el código fuente de la función
+  timeout = 60 # Timeout de 60 segundos por si hay que realizar muchos pings o las webs tardan en responder, para evitar que Lambda termine la ejecución antes de tiempo y no se registren los logs ni se envíen las alertas por SNS
 
   # Inyección de Variables de Entorno
   # Permite pasar información dinámica de la infraestructura de AWS al código Python
   # sin tener que escribir (hardcodear) los valores directamente en el script.
   environment {
     variables = {
+      TABLE_INVENTORY = aws_dynamodb_table.websites_inventory.name,
+      TABLE_LOGS = aws_dynamodb_table.websites_logs.name,
       SNS_TOPIC_ARN = aws_sns_topic.watchdog_alerts.arn
     }
   }
@@ -56,4 +59,11 @@ resource "aws_lambda_function" "lambda_api" {
   handler = "api_backend.lambda_handler"
   runtime = "python3.10"
   source_code_hash = data.archive_file.api_backend_zip.output_base64sha256    # Para actualizar los archivos zip cuando cambie el código fuente de la función
+
+  environment {
+    variables = {
+      TABLE_INVENTORY = aws_dynamodb_table.websites_inventory.name,
+      TABLE_LOGS = aws_dynamodb_table.websites_logs.name
+    }
+  }
 }

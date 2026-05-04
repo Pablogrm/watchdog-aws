@@ -1,17 +1,31 @@
 import json
+import os
 import boto3
 import logging
+from decimal import Decimal
 from boto3.dynamodb.conditions import Key
 from botocore.exceptions import ClientError
 
 # Conexion a nuestras bases de datos DynamoDB
 dynamodb = boto3.resource('dynamodb')
-TABLE_LOGS = dynamodb.Table('websites_logs')
-TABLE_INVENTORY = dynamodb.Table('websites_inventory')
+TABLE_INVENTORY = dynamodb.Table(os.environ['TABLE_INVENTORY']) # Usamos la variable de entorno para obtener el nombre de la tabla de inventario 
+TABLE_LOGS = dynamodb.Table(os.environ['TABLE_LOGS'])           # y lo convertimos a un objeto de tabla de DynamoDB para poder hacer operaciones CRUD
 
 # Configurar el logger para Cloudwatch Logs
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
+
+# Clase para enseñar a json.dumps cómo manejar los números de DynamoDB (convertir Decimal a int o float según corresponda)
+class DecimalEncoder(json.JSONEncoder):
+    def default(self, obj):
+        if isinstance(obj, Decimal):
+            # Si no tiene decimales, lo devuelve como int (ej. 200)
+            if obj % 1 == 0:
+                return int(obj)
+            # Si tiene decimales, lo devuelve como float (ej. 45.5)
+            else:
+                return float(obj)
+        return super(DecimalEncoder, self).default(obj)
 
 def lambda_handler(event, context):
     http_method = event.get('httpMethod')
@@ -43,7 +57,7 @@ def lambda_handler(event, context):
                 return {
                     'statusCode': 200,
                     'headers': headers,
-                    'body': json.dumps(TABLE_INVENTORY.scan().get('Items', []))
+                    'body': json.dumps(TABLE_INVENTORY.scan().get('Items', []), cls=DecimalEncoder)
                 }
             
             # 2. POST: Añadir una web nueva
@@ -106,7 +120,7 @@ def lambda_handler(event, context):
                 return {
                     'statusCode': 200,
                     'headers': headers,
-                    'body': json.dumps(response.get('Items', []))
+                    'body': json.dumps(response.get('Items', []), cls=DecimalEncoder)
                 }
         
         # RUTA: No existe (ej. /usuarios)

@@ -1,7 +1,8 @@
 from urllib.request import Request, urlopen
 from urllib.error import URLError, HTTPError
-from datetime import datetime
+from datetime import datetime, timezone
 from botocore.exceptions import ClientError
+import http.client
 import time
 import boto3
 import logging
@@ -9,8 +10,8 @@ import os
 
 # Conexion a nuestras bases de datos DynamoDB
 dynamodb = boto3.resource('dynamodb')
-TABLE_LOGS = dynamodb.Table('websites_logs')
-TABLE_INVENTORY = dynamodb.Table('websites_inventory')
+TABLE_INVENTORY = dynamodb.Table(os.environ['TABLE_INVENTORY']) # Usamos la variable de entorno para obtener el nombre de la tabla de inventario 
+TABLE_LOGS = dynamodb.Table(os.environ['TABLE_LOGS'])           # y lo convertimos a un objeto de tabla de DynamoDB para poder hacer operaciones CRUD
 
 # Conexion a SNS
 sns_client = boto3.client('sns')
@@ -23,7 +24,7 @@ logger.setLevel(logging.INFO)
 
 # Funcion que realiza un ping a una web
 def check_website(url, name):
-    actual_time = datetime.now(datetime.timezone.utc).isoformat()
+    actual_time = datetime.now(timezone.utc).isoformat()
 
     # Calculamos el TTL (7 días en el futuro en formato Unix Epoch): 7 días * 24h * 60m * 60s = 604800 segundos
     expiration_date = int(time.time()) + 604800
@@ -83,6 +84,36 @@ def check_website(url, name):
             "status": 0,
             "latencia": latency_ms,
             "mensaje_http": f"Conexion fallida: {e.reason}",
+            "expiration": expiration_date,
+            "health_status": "ERROR"
+        }
+    
+    except http.client.RemoteDisconnected as e:
+        # CASO ERROR DE DESCONEXIÓN REMOTA (e.g., el servidor cierra la conexión antes de responder)
+        end_time = time.perf_counter()
+        latency_ms = round((end_time - start_time) * 1000)
+        return {
+            "url": url,
+            "timestamp": actual_time,
+            "nombre": name,
+            "status": 0,
+            "latencia": latency_ms,
+            "mensaje_http": f"Desconexion remota: {str(e)}",
+            "expiration": expiration_date,
+            "health_status": "ERROR"
+        }
+
+    except Exception as e:
+        # CASO ERROR DESCONOCIDO: Atrapa cualquier otro error de Python para que la Lambda nunca se cuelgue
+        end_time = time.perf_counter()
+        latency_ms = round((end_time - start_time) * 1000)
+        return {
+            "url": url,
+            "timestamp": actual_time,
+            "nombre": name,
+            "status": 0,
+            "latencia": latency_ms,
+            "mensaje_http": f"Error interno inesperado: {str(e)}",
             "expiration": expiration_date,
             "health_status": "ERROR"
         }
@@ -198,7 +229,7 @@ def lambda_handler(event, context):
     logger.info("Iniciando ejecución del Watchdog...")
     
     # Recuperamos el ARN del tema SNS desde las variables de entorno
-    topic_arn = os.environ.get('SNS_TOPIC_ARN')
+    topic_arn = os.environ['SNS_TOPIC_ARN']
     if not topic_arn:
         logger.warning("No se encontró la variable de entorno SNS_TOPIC_ARN. Las alertas no se enviarán.")
 
@@ -213,6 +244,7 @@ def lambda_handler(event, context):
 
         # Guardamos en dynamodb
         saved = save_to_dynamodb(result)
+        logger.info(f"web: {web['nombre']} - Guardada en base de datos: {'Exito' if saved else 'Fallo'}.")
 
         status_http = result.get('status')
 
