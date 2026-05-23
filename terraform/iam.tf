@@ -5,7 +5,7 @@
 
 # ====================================================================
 # 1. ROLES DE EJECUCIÓN (Trust Policies)
-# Define QUÉ servicios de AWS están autorizados a asumir estos roles
+# Define qué servicios de AWS están autorizados a asumir estos roles
 # ====================================================================
 # Rol principal para las funciones Lambda
 resource "aws_iam_role" "lambda_role" {
@@ -85,7 +85,7 @@ resource "aws_iam_role_policy" "lambda_dynamodb" {
                     # Acceso a la tabla de inventario
                     aws_dynamodb_table.websites_inventory.arn,
 
-                    # Acceso a la tabla de logs y índices secundarios globales (GSI)
+                    # Acceso a la tabla de logs e índices secundarios globales (GSI)
                     aws_dynamodb_table.websites_logs.arn,
                     "${aws_dynamodb_table.websites_logs.arn}/index/*"
                 ]    
@@ -104,7 +104,7 @@ resource "aws_iam_role_policy" "lambda_sns" {
     Statement = [
         {
             Effect = "Allow"
-            Action = "sns:Publish"  # To send mails when websites comes down
+            Action = "sns:Publish"  # Permite a Lambda publicar mensajes en el topic de SNS para enviar alertas por email
             Resource = aws_sns_topic.watchdog_alerts.arn
         }
     ]

@@ -27,6 +27,7 @@ class DecimalEncoder(json.JSONEncoder):
                 return float(obj)
         return super(DecimalEncoder, self).default(obj)
 
+
 def lambda_handler(event, context):
     http_method = event.get('httpMethod')
     path = event.get('resource')
@@ -34,8 +35,11 @@ def lambda_handler(event, context):
     # Extraemos los parámetros de la URL (ej. ?url=... o ?status=...)
     query_params = event.get('queryStringParameters') or {}
 
+    # Leemos la URL del frontend desde las variables de entorno para configurar CORS, si no está definida permitimos todas las URLs (usando '*').
+    frontend_url = os.environ.get('FRONTEND_URL', '*')
+
     headers = {
-        'Access-Control-Allow-Origin': '*', # Poner la url del frontend una vez se implemente
+        'Access-Control-Allow-Origin': frontend_url,
         'Access-Control-Allow-Headers': 'Content-Type',
         'Access-Control-Allow-Methods': 'OPTIONS,POST,GET,DELETE'
     }
@@ -82,9 +86,10 @@ def lambda_handler(event, context):
                 
                 TABLE_INVENTORY.delete_item(Key={'url': url_to_delete})
                 logger.info(f"Web {url_to_delete} eliminada del inventario.")
-                return {'statusCode': 200,
-                        'headers': headers,
-                        'body': json.dumps({'msg': f'Web {url_to_delete} eliminada'})
+                return {
+                    'statusCode': 200,
+                    'headers': headers,
+                    'body': json.dumps({'msg': f'Web {url_to_delete} eliminada'})
                 }
                 
 

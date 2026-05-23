@@ -44,7 +44,7 @@ def check_website(url, name):
         code = response.getcode()
         reason = response.reason
 
-        # CASO EXITO (e.g., 200 OK)
+        # CASO EXITO (ej. 200 OK)
         return{
             "url": url,
             "timestamp": actual_time,
@@ -57,7 +57,7 @@ def check_website(url, name):
         }
     
     except HTTPError as e:
-        # CASO ERROR DE SERVIDOR (e.g., 404 Not Found, 500 Internal Server Error)
+        # CASO ERROR DE SERVIDOR (ej. 404 Not Found, 500 Internal Server Error)
         # El servidor responde pero con error
         end_time = time.perf_counter()
         latency_ms = round((end_time - start_time) * 1000)
@@ -73,7 +73,7 @@ def check_website(url, name):
         }
 
     except URLError as e:
-        # CASO ERROR DE RED (e.g., DNS failure, connection timeout)
+        # CASO ERROR DE RED O CAÍDA DE DNS (ej. DNS failure, connection timeout)
         # No hay respuesta HTTP, forzamos status a 0
         end_time = time.perf_counter()
         latency_ms = round((end_time - start_time) * 1000)
@@ -89,7 +89,7 @@ def check_website(url, name):
         }
     
     except http.client.RemoteDisconnected as e:
-        # CASO ERROR DE DESCONEXIÓN REMOTA (e.g., el servidor cierra la conexión antes de responder)
+        # CASO ERROR DE DESCONEXIÓN REMOTA (ej. el servidor cierra la conexión antes de responder)
         end_time = time.perf_counter()
         latency_ms = round((end_time - start_time) * 1000)
         return {
@@ -163,7 +163,7 @@ def send_alert(nombre_web, mensaje_error, topic_arn):
             f"Alerta del Watchdog\n"
             f"Se ha detectado un problema con la web: {nombre_web}\n"
             f"Detalle del error: {mensaje_error}\n"
-            f"Revisa el panel de control de informacion para mas informacion."
+            f"Revisa el panel de control para mas información."
         )
 
         response = sns_client.publish(
@@ -257,7 +257,7 @@ def lambda_handler(event, context):
     
     logger.info("Ejecucion del Watchdog finalizada correctamente.")
 
-    # Para que AWS marqué la ejecución de la lambda como exitosa en las métricas
+    # Para que AWS marque la ejecución de la lambda como exitosa en las métricas
     return {
         'statusCode': 200,
         'body': 'Chequeo de webs completado.'
