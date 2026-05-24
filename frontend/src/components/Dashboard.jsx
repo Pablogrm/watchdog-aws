@@ -34,10 +34,8 @@ function Dashboard() {
   const fetchPerformanceData = async () => {
     try {
       const response = await axios.get(`${API_URL}/logs`);
-      const logsData = response.data;
-
-      // Ordenar cronológicamente para la gráfica
-      const sortedLogs = [...logsData].sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+      // Ordenar cronológicamente para la gráfica (De más antiguo a más nuevo: a - b)
+      const sortedLogs = response.data.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
       
       const formattedChartData = sortedLogs.slice(-20).map(log => ({
         time: log.timestamp.substring(11, 16),
@@ -45,15 +43,21 @@ function Dashboard() {
       }));
       setChartData(formattedChartData);
 
-      // Calcular cuántas webs distintas están fallando extrayendo su health_status
+      // Calcular cuántas webs distintas están fallando para el KPI de Alertas Activas
+      // Guardamos el inventario actual para comparar con los logs y evitar contar alertas de webs que ya no se monitorizan
+      const activeUrls = inventory.map(web => web.url);
       const healthStatusByUrl = {};
       sortedLogs.forEach(log => {
         healthStatusByUrl[log.url] = log.health_status;
       });
-      
-      // Función matemática de Javascript para contar los errores
-      const arrayDeEstados = Object.values(healthStatusByUrl);
-      const errorsCount = arrayDeEstados.filter(estadoSalud => estadoSalud === 'ERROR').length;
+
+      let errorsCount = 0;
+      for (const url in healthStatusByUrl) {
+        // Suma 1 a la alerta SOLO si el estado es ERROR y la web existe en el inventario actual
+        if (healthStatusByUrl[url] === 'ERROR' && activeUrls.includes(url)) {
+          errorsCount++;
+        }
+      }
       
       setActiveAlerts(errorsCount);
 

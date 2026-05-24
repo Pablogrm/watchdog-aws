@@ -31,7 +31,11 @@ def check_website(url, name):
 
     # Empezamos a contar el tiempo de latencia
     start_time = time.perf_counter()
-    req = Request(url)  
+
+    # Añadimos un User-Agent falso haciéndonos pasar por Google Chrome en Windows
+    headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'}
+    req = Request(url, headers=headers)
+  
     try:
         # Intento de llegar al endpoint con timeout = 5 segundos
         response = urlopen(req, timeout=5)
@@ -73,7 +77,7 @@ def check_website(url, name):
         }
 
     except URLError as e:
-        # CASO ERROR DE RED O CAÍDA DE DNS (ej. DNS failure, connection timeout)
+        # CASO DE FALLO DE ENRUTAMIENTO (ej. DNS failure, URL mal escrita o connection timeout)
         # No hay respuesta HTTP, forzamos status a 0
         end_time = time.perf_counter()
         latency_ms = round((end_time - start_time) * 1000)
@@ -98,7 +102,7 @@ def check_website(url, name):
             "nombre": name,
             "status": 0,
             "latencia": latency_ms,
-            "mensaje_http": f"Desconexion remota: {str(e)}",
+            "mensaje_http": f"Desconexión remota: {str(e)}",
             "expiration": expiration_date,
             "health_status": "ERROR"
         }
@@ -136,7 +140,7 @@ def save_to_dynamodb(data):
         )
 
         # Éxito, la web se ha guardado correctamente con sus nuevos valores
-        logger.info(f"Exito: {data['nombre']} guardado correctamente.")
+        logger.info(f"web: {data['nombre']} - Guardada correctamente en base de datos.")
         return True
     
     # Error de AWS
@@ -244,7 +248,6 @@ def lambda_handler(event, context):
 
         # Guardamos en dynamodb
         saved = save_to_dynamodb(result)
-        logger.info(f"web: {web['nombre']} - Guardada en base de datos: {'Exito' if saved else 'Fallo'}.")
 
         status_http = result.get('status')
 
