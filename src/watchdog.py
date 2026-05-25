@@ -38,7 +38,7 @@ def check_website(url, name):
   
     try:
         # Intento de llegar al endpoint con timeout = 5 segundos
-        response = urlopen(req, timeout=5)
+        response = urlopen(req, timeout=7)
         end_time = time.perf_counter()
         
         # Se calcula la latencia en ms y se redondea al entero mas proximo para evitar tener muchos decimales

@@ -64,6 +64,7 @@ resource "aws_lambda_function" "lambda_api" {
     variables = {
       TABLE_INVENTORY = aws_dynamodb_table.websites_inventory.name,
       TABLE_LOGS = aws_dynamodb_table.websites_logs.name
+      WATCHDOG_INTERVAL = var.check_time
       FRONTEND_URL = "https://${aws_cloudfront_distribution.watchdog_cloudfront_distribution.domain_name}" 
     }
   }

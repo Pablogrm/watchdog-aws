@@ -92,7 +92,6 @@ def lambda_handler(event, context):
                     'body': json.dumps({'msg': f'Web {url_to_delete} eliminada'})
                 }
                 
-
         
         # RUTA: /logs (Visualización y Filtros con GSI)
         elif path == '/logs':
@@ -100,24 +99,17 @@ def lambda_handler(event, context):
             # 1. GET
             if http_method == 'GET':
                 url_filter = query_params.get('url')
-                status_filter = query_params.get('health_status')
+                status_filter = query_params.get('health_status') # Puede ser 'OK' o 'ERROR'
 
-                # CASO 1: Filtrando por URL específica
-                if url_filter:
-                    logger.info(f"Filtrando logs de la url {url_filter}.")
-                    response = TABLE_LOGS.query(
-                        KeyConditionExpression=Key('url').eq(url_filter)
-                    )
-
-                # CASO 2: Filtrando por health_status, usamos el GSI (StatusIndex)
-                elif status_filter:
+                # CASO 1: Filtrando por health_status, usamos el GSI (StatusIndex)
+                if status_filter: # Si se ha especificado un filtro de estado, va a ser 'ERROR' debido a que en el frontend solo mostramos esa opción, pero lo dejamos abierto por si en un futuro queremos filtrar también por 'OK'
                     logger.info(f"Filtrando logs por health_status (OK/ERROR): {status_filter} usando GSI.")
                     response = TABLE_LOGS.query(
                         IndexName='StatusIndex',
                         KeyConditionExpression=Key('health_status').eq(status_filter)
                     )
 
-                # CASO 3: Si no hay filtro devolvemos todos los logs
+                # CASO 2: Si no hay filtro devolvemos todos los logs
                 else:
                     logger.info(f"Devolviendo todos los logs...")
                     response = TABLE_LOGS.scan()
@@ -128,6 +120,19 @@ def lambda_handler(event, context):
                     'body': json.dumps(response.get('Items', []), cls=DecimalEncoder)
                 }
         
+
+        # RUTA: /interval (Configuración del Intervalo de Chequeo)
+        elif path == '/interval':
+            if http_method == 'GET':
+                # Leemos la variable inyectada dinamicamente (Si no existe, devuelve '5')
+                intervalo = os.environ.get('WATCHDOG_INTERVAL', '5')
+                
+                return {
+                    'statusCode': 200,
+                    'headers': headers,
+                    'body': json.dumps({'intervalo': intervalo})
+                }
+
         # RUTA: No existe (ej. /usuarios)
         return {
             'statusCode': 404, 

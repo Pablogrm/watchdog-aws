@@ -2,10 +2,10 @@
 #                         VARIABLES
 #---------------------------------------------------------------
 
-# Región de AWS
+# Región de AWS, en nuestro caso la región de España (eu-south-2) para reducir la latencia y cumplir con la legislación de protección de datos.
 variable "aws_region" {
     type = string
-    default = "us-east-1"
+    default = "eu-south-2"
     description = "The AWS region to deploy resources in"
 }
 
