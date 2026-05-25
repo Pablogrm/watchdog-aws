@@ -64,7 +64,7 @@ function Dashboard() {
         setLambdaInterval(response.data.intervalo);
       }
     } catch (error) {
-      console.error("Error fetching config:", error);
+      console.error("Error fetching interval:", error);
     }
   };
     
@@ -163,7 +163,7 @@ function Dashboard() {
           <div className="bg-gray-800/90 border border-gray-700 p-6 rounded-xl shadow-xl flex justify-between items-center transition-transform hover:scale-[1.02]">
             <div>
               <h3 className="text-gray-300 text-xs font-bold uppercase tracking-widest mb-1">Lambda Interval</h3>
-              <p className="text-4xl font-black text-white">{interval} <span className="text-lg text-gray-500 font-bold uppercase">min</span></p>
+              <p className="text-4xl font-black text-white">{lambdaInterval} <span className="text-lg text-gray-500 font-bold uppercase">min</span></p>
             </div>
             <button onClick={() => navigate('/logs')} className="px-4 py-2 rounded-lg text-xs font-bold bg-orange-500/20 text-orange-300 border border-orange-500/30 hover:bg-orange-500/40">
               View Logs
