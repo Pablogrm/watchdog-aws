@@ -1,36 +1,59 @@
-#---------------------------------------------------------------
+# ====================================================================
 #                         VARIABLES
-#---------------------------------------------------------------
+# ====================================================================
 
-# Región de AWS, en nuestro caso la región de España (eu-south-2) para reducir la latencia y cumplir con la legislación de protección de datos.
+
+# ====================================================================
+# REGIÓN DE AWS
+# eRegión de España (eu-south-2) para reducir la latencia y cumplir 
+# con la legislación de protección de datos.
+# ====================================================================
 variable "aws_region" {
     type = string
     default = "eu-south-2"
     description = "The AWS region to deploy resources in"
 }
 
-# Nombre del Proyecto: Watchdog-AWS
+
+# ====================================================================
+# NOMBRE DEL PROYECTO
+# Se utiliza como prefijo para nombrar los recursos
+# ====================================================================
 variable "project_name" {
     type = string
     default = "watchdog"
     description = "Nombre del Proyecto"
 }
 
-# Entorno: Fase del Ciclo de Vida del proyecto
+
+# ====================================================================
+# ENTORNO DE DESPLIEGUE
+# Fase del Ciclo de Vida del proyecto (dev, test, prod)
+# ====================================================================
 variable "stage" {
     type = string
     default = "prod"
     description = "El entorno de despliegue de la infraestructura (dev, test, prod)"
 }
 
-# Frecuencia en minutos para chequear una página web
+
+# ====================================================================
+# FRECUENCIA DE CHEQUEO
+# Frecuencia en minutos para ejecutar el Watchdog y chequear las páginas web
+# ====================================================================
 variable "check_time" {
     type = number
     default = 5
     description = "Frecuencia en minutos para ejecutar el Watchdog"
 }
 
-# Email: No se especifica ningún valor predeterminado para evitar hardcodear la dirección de correo electrónico
+
+# ====================================================================
+# EMAIL DE NOTIFICACIÓN
+# Email para recibir las alertas cuando una página web cae
+# No se especifica ningún valor predeterminado para evitar hardcodear 
+# la dirección de correo electrónico
+# ====================================================================
 variable "email_notification" {
     type = string
     description = "Email para recibir las alertas cuando una página web cae"

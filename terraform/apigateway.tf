@@ -1,18 +1,21 @@
-# ---------------------------------------------------------------------------
+# ============================================================================
 #                             API GATEWAY
-# ---------------------------------------------------------------------------
+# ============================================================================
 
 
-# API Gateway REST API
+# ============================================================================
+# API GATEWAY REST API
+# ============================================================================
 resource "aws_api_gateway_rest_api" "watchdog_api" {
   name = "${var.project_name}-api"
   description = "REST API Gateway for Watchdog"
 }
 
 
-# ---------------------------------------------------------------------------
+# ============================================================================
 # RECURSO 1: /webs
-# ---------------------------------------------------------------------------
+# Para gestionar las páginas web que se van a chequear
+# ============================================================================
 resource "aws_api_gateway_resource" "watchdog_webs_resource" {
     rest_api_id = aws_api_gateway_rest_api.watchdog_api.id 
     parent_id = aws_api_gateway_rest_api.watchdog_api.root_resource_id 
@@ -38,9 +41,10 @@ resource "aws_api_gateway_integration" "watchdog_webs_integration" {
 }
 
 
-# ---------------------------------------------------------------------------
+# ============================================================================
 # RECURSO 2: /logs
-# ---------------------------------------------------------------------------
+# Para obtener el historial de chequeos de las webs
+# ============================================================================
 resource "aws_api_gateway_resource" "watchdog_logs_resource" {
     rest_api_id = aws_api_gateway_rest_api.watchdog_api.id 
     parent_id = aws_api_gateway_rest_api.watchdog_api.root_resource_id 
@@ -85,9 +89,10 @@ resource "aws_api_gateway_integration" "logs_get_integration" {
 }
 
 
-# ---------------------------------------------------------------------------
+# ============================================================================
 # RECURSO 3: /interval
-# ---------------------------------------------------------------------------
+# Para obtener el intervalo de chequeo actual de Lambda
+# ============================================================================
 resource "aws_api_gateway_resource" "watchdog_interval_resource" {
     rest_api_id = aws_api_gateway_rest_api.watchdog_api.id 
     parent_id = aws_api_gateway_rest_api.watchdog_api.root_resource_id 

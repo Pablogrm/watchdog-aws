@@ -10,8 +10,8 @@ import os
 
 # Conexion a nuestras bases de datos DynamoDB
 dynamodb = boto3.resource('dynamodb')
-TABLE_INVENTORY = dynamodb.Table(os.environ['TABLE_INVENTORY']) # Usamos la variable de entorno para obtener el nombre de la tabla de inventario 
-TABLE_LOGS = dynamodb.Table(os.environ['TABLE_LOGS'])           # y lo convertimos a un objeto de tabla de DynamoDB para poder hacer operaciones CRUD
+TABLE_INVENTORY = dynamodb.Table(os.environ.get('TABLE_INVENTORY')) # Usamos la variable de entorno para obtener el nombre de la tabla de inventario 
+TABLE_LOGS = dynamodb.Table(os.environ.get('TABLE_LOGS'))           # y lo convertimos a un objeto de tabla de DynamoDB para poder hacer operaciones CRUD
 
 # Conexion a SNS
 sns_client = boto3.client('sns')
@@ -37,7 +37,7 @@ def check_website(url, name):
     req = Request(url, headers=headers)
   
     try:
-        # Intento de llegar al endpoint con timeout = 5 segundos
+        # Intento de llegar al endpoint con timeout = 7 segundos
         response = urlopen(req, timeout=7)
         end_time = time.perf_counter()
         
@@ -77,7 +77,7 @@ def check_website(url, name):
         }
 
     except URLError as e:
-        # CASO DE FALLO DE ENRUTAMIENTO (ej. DNS failure, URL mal escrita o connection timeout)
+        # CASO DE FALLO DE ENRUTAMIENTO (ej. DNS Failure, URL mal escrita, Connection Timeout o Connection Refused)
         # No hay respuesta HTTP, forzamos status a 0
         end_time = time.perf_counter()
         latency_ms = round((end_time - start_time) * 1000)
@@ -233,7 +233,7 @@ def lambda_handler(event, context):
     logger.info("Iniciando ejecución del Watchdog...")
     
     # Recuperamos el ARN del tema SNS desde las variables de entorno
-    topic_arn = os.environ['SNS_TOPIC_ARN']
+    topic_arn = os.environ.get('SNS_TOPIC_ARN')
     if not topic_arn:
         logger.warning("No se encontró la variable de entorno SNS_TOPIC_ARN. Las alertas no se enviarán.")
 
@@ -249,13 +249,13 @@ def lambda_handler(event, context):
         # Guardamos en dynamodb
         saved = save_to_dynamodb(result)
 
-        status_http = result.get('status')
+        current_status = result.get('health_status')
 
-        if status_http != 200:
-            logger.warning(f"¡Caída detectada en {web['nombre']}! Status: {status_http}")
+        if current_status == 'ERROR':
+            logger.warning(f"¡Caída detectada en {web['nombre']}!")
 
             if topic_arn:
-                error_msg = result.get('mensaje_http', f"Código HTTP inesperado: {status_http}")
+                error_msg = result.get('mensaje_http', f"Código HTTP inesperado: {current_status}")
                 send_alert(web['nombre'], error_msg, topic_arn)
     
     logger.info("Ejecucion del Watchdog finalizada correctamente.")

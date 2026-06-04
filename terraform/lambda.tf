@@ -1,10 +1,11 @@
-#---------------------------------------------------------------
+# ====================================================================
 #                         LAMBDA
-#---------------------------------------------------------------
+# ====================================================================
 
 
-# Lambda Watchdog
-#---------------------------------------------------------------
+# ====================================================================
+# LAMBDA WATCHDOG
+# ====================================================================
 
 # Empaquetado del código fuente de watchdog.py
 # AWS Lambda exige que el código se suba comprimido, este recurso de Terraform automatiza este proceso
@@ -19,7 +20,7 @@ data "archive_file" "watchdog_zip" {
 # Función Lambda Watchdog 
 resource "aws_lambda_function" "lambda_watchdog" {
   function_name = "lambda-watchdog"
-  role = aws_iam_role.lambda_role.arn
+  role = aws_iam_role.lambda_watchdog_role.arn
   filename = data.archive_file.watchdog_zip.output_path
   handler = "watchdog.lambda_handler"
   runtime = "python3.10"
@@ -38,8 +39,10 @@ resource "aws_lambda_function" "lambda_watchdog" {
   }
 }
 
-# Lambda API
-#---------------------------------------------------------------
+
+# ====================================================================
+# LAMBDA API
+# ====================================================================
 
 # Empaquetado del código fuente de api_backend.py
 # AWS Lambda exige que el código se suba comprimido, este recurso de Terraform automatiza este proceso
@@ -54,7 +57,7 @@ data "archive_file" "api_backend_zip" {
 # Función Lambda APi
 resource "aws_lambda_function" "lambda_api" {
   function_name = "lambda-api"
-  role = aws_iam_role.lambda_role.arn
+  role = aws_iam_role.lambda_api_role.arn
   filename = data.archive_file.api_backend_zip.output_path
   handler = "api_backend.lambda_handler"
   runtime = "python3.10"

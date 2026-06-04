@@ -1,10 +1,12 @@
-#---------------------------------------------------------------
-#                         DYNAMODB
-#---------------------------------------------------------------
+# ====================================================================
+#                           DYNAMODB
+# ====================================================================
 
 
-# Tabla de Inventario
+# ====================================================================
+# TABLA DE INVENTARIO
 # Contiene las webs que se van a chequear
+# ====================================================================
 resource "aws_dynamodb_table" "websites_inventory" {
   name = "${var.project_name}-websites-inventory-table"
   billing_mode = "PAY_PER_REQUEST" # On-Demand
@@ -19,8 +21,10 @@ resource "aws_dynamodb_table" "websites_inventory" {
 }
 
 
-# Tabla de Logs
+# ====================================================================
+# TABLA DE LOGS
 # Contiene todos los chequeos de las paginas webs
+# ====================================================================
 resource "aws_dynamodb_table" "websites_logs" {
     name = "${var.project_name}-websites-logs-table"
     billing_mode = "PAY_PER_REQUEST" # On-Demand
