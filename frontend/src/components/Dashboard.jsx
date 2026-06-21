@@ -42,7 +42,7 @@ function Dashboard() {
       const sortedLogs = response.data.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
       
       const formattedChartData = sortedLogs.slice(-20).map(log => ({
-        time: log.timestamp.substring(11, 16),
+        time: log.timestamp.substring(11, 19),
         latency: log.latencia || 0
       }));
 
