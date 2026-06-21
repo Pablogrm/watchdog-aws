@@ -192,7 +192,7 @@ function Dashboard() {
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={chartData}>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#4B5563" />
-                <XAxis dataKey="time" axisLine={false} tickLine={false} tick={{fill: '#D1D5DB', fontSize: 12}} dy={10} />
+                <XAxis dataKey="time" tickFormatter={(value) => value.substring(0, 8)} stroke="#9ca3af" axisLine={false} tickLine={false} tick={{fill: '#D1D5DB', fontSize: 12}} dy={10} />
                 <YAxis axisLine={false} tickLine={false} tick={{fill: '#D1D5DB', fontSize: 12}} dx={-10} />
                 <Tooltip contentStyle={{ backgroundColor: '#1F2937', borderColor: '#374151', borderRadius: '12px' }} itemStyle={{ color: '#F97316', fontWeight: 'bold' }} labelStyle={{ color: '#9CA3AF' }} />
                 <Line type="monotone" dataKey="latency" stroke="#F97316" strokeWidth={4} dot={{ r: 4, fill: '#111827', strokeWidth: 2 }} activeDot={{ r: 8, strokeWidth: 0 }} />
