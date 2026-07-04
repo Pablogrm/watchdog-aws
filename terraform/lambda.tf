@@ -1,10 +1,11 @@
-#---------------------------------------------------------------
+# ====================================================================
 #                         LAMBDA
-#---------------------------------------------------------------
+# ====================================================================
 
 
-# Lambda Watchdog
-#---------------------------------------------------------------
+# ====================================================================
+# LAMBDA WATCHDOG
+# ====================================================================
 
 # Empaquetado del código fuente de watchdog.py
 # AWS Lambda exige que el código se suba comprimido, este recurso de Terraform automatiza este proceso
@@ -19,24 +20,29 @@ data "archive_file" "watchdog_zip" {
 # Función Lambda Watchdog 
 resource "aws_lambda_function" "lambda_watchdog" {
   function_name = "lambda-watchdog"
-  role = aws_iam_role.lambda_role.arn
+  role = aws_iam_role.lambda_watchdog_role.arn
   filename = data.archive_file.watchdog_zip.output_path
   handler = "watchdog.lambda_handler"
   runtime = "python3.10"
   source_code_hash = data.archive_file.watchdog_zip.output_base64sha256   # Para actualizar los archivos zip cuando cambie el código fuente de la función
+  timeout = 60 # Timeout de 60 segundos por si hay que realizar muchos pings o las webs tardan en responder, para evitar que Lambda termine la ejecución antes de tiempo y no se registren los logs ni se envíen las alertas por SNS
 
   # Inyección de Variables de Entorno
   # Permite pasar información dinámica de la infraestructura de AWS al código Python
   # sin tener que escribir (hardcodear) los valores directamente en el script.
   environment {
     variables = {
+      TABLE_INVENTORY = aws_dynamodb_table.websites_inventory.name,
+      TABLE_LOGS = aws_dynamodb_table.websites_logs.name,
       SNS_TOPIC_ARN = aws_sns_topic.watchdog_alerts.arn
     }
   }
 }
 
-# Lambda API
-#---------------------------------------------------------------
+
+# ====================================================================
+# LAMBDA API
+# ====================================================================
 
 # Empaquetado del código fuente de api_backend.py
 # AWS Lambda exige que el código se suba comprimido, este recurso de Terraform automatiza este proceso
@@ -51,9 +57,18 @@ data "archive_file" "api_backend_zip" {
 # Función Lambda APi
 resource "aws_lambda_function" "lambda_api" {
   function_name = "lambda-api"
-  role = aws_iam_role.lambda_role.arn
+  role = aws_iam_role.lambda_api_role.arn
   filename = data.archive_file.api_backend_zip.output_path
   handler = "api_backend.lambda_handler"
   runtime = "python3.10"
   source_code_hash = data.archive_file.api_backend_zip.output_base64sha256    # Para actualizar los archivos zip cuando cambie el código fuente de la función
+
+  environment {
+    variables = {
+      TABLE_INVENTORY = aws_dynamodb_table.websites_inventory.name,
+      TABLE_LOGS = aws_dynamodb_table.websites_logs.name
+      WATCHDOG_INTERVAL = var.check_time
+      FRONTEND_URL = "https://${aws_cloudfront_distribution.watchdog_cloudfront_distribution.domain_name}" 
+    }
+  }
 }

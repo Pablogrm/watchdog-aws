@@ -1,7 +1,8 @@
 from urllib.request import Request, urlopen
 from urllib.error import URLError, HTTPError
-from datetime import datetime
+from datetime import datetime, timezone
 from botocore.exceptions import ClientError
+import http.client
 import time
 import boto3
 import logging
@@ -9,8 +10,8 @@ import os
 
 # Conexion a nuestras bases de datos DynamoDB
 dynamodb = boto3.resource('dynamodb')
-TABLE_LOGS = dynamodb.Table('websites_logs')
-TABLE_INVENTORY = dynamodb.Table('websites_inventory')
+TABLE_INVENTORY = dynamodb.Table(os.environ.get('TABLE_INVENTORY')) # Usamos la variable de entorno para obtener el nombre de la tabla de inventario 
+TABLE_LOGS = dynamodb.Table(os.environ.get('TABLE_LOGS'))           # y lo convertimos a un objeto de tabla de DynamoDB para poder hacer operaciones CRUD
 
 # Conexion a SNS
 sns_client = boto3.client('sns')
@@ -23,17 +24,21 @@ logger.setLevel(logging.INFO)
 
 # Funcion que realiza un ping a una web
 def check_website(url, name):
-    actual_time = datetime.now(datetime.timezone.utc).isoformat()
+    actual_time = datetime.now(timezone.utc).isoformat()
 
     # Calculamos el TTL (7 días en el futuro en formato Unix Epoch): 7 días * 24h * 60m * 60s = 604800 segundos
     expiration_date = int(time.time()) + 604800
 
     # Empezamos a contar el tiempo de latencia
     start_time = time.perf_counter()
-    req = Request(url)  
+
+    # Añadimos un User-Agent falso haciéndonos pasar por Google Chrome en Windows
+    headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'}
+    req = Request(url, headers=headers)
+  
     try:
-        # Intento de llegar al endpoint con timeout = 5 segundos
-        response = urlopen(req, timeout=5)
+        # Intento de llegar al endpoint con timeout = 7 segundos
+        response = urlopen(req, timeout=7)
         end_time = time.perf_counter()
         
         # Se calcula la latencia en ms y se redondea al entero mas proximo para evitar tener muchos decimales
@@ -43,7 +48,7 @@ def check_website(url, name):
         code = response.getcode()
         reason = response.reason
 
-        # CASO EXITO (e.g., 200 OK)
+        # CASO EXITO (ej. 200 OK)
         return{
             "url": url,
             "timestamp": actual_time,
@@ -56,7 +61,7 @@ def check_website(url, name):
         }
     
     except HTTPError as e:
-        # CASO ERROR DE SERVIDOR (e.g., 404 Not Found, 500 Internal Server Error)
+        # CASO ERROR DE SERVIDOR (ej. 404 Not Found, 500 Internal Server Error)
         # El servidor responde pero con error
         end_time = time.perf_counter()
         latency_ms = round((end_time - start_time) * 1000)
@@ -72,7 +77,7 @@ def check_website(url, name):
         }
 
     except URLError as e:
-        # CASO ERROR DE RED (e.g., DNS failure, connection timeout)
+        # CASO DE FALLO DE ENRUTAMIENTO (ej. DNS Failure, URL mal escrita, Connection Timeout o Connection Refused)
         # No hay respuesta HTTP, forzamos status a 0
         end_time = time.perf_counter()
         latency_ms = round((end_time - start_time) * 1000)
@@ -83,6 +88,36 @@ def check_website(url, name):
             "status": 0,
             "latencia": latency_ms,
             "mensaje_http": f"Conexion fallida: {e.reason}",
+            "expiration": expiration_date,
+            "health_status": "ERROR"
+        }
+    
+    except http.client.RemoteDisconnected as e:
+        # CASO ERROR DE DESCONEXIÓN REMOTA (ej. el servidor cierra la conexión antes de responder)
+        end_time = time.perf_counter()
+        latency_ms = round((end_time - start_time) * 1000)
+        return {
+            "url": url,
+            "timestamp": actual_time,
+            "nombre": name,
+            "status": 0,
+            "latencia": latency_ms,
+            "mensaje_http": f"Desconexión remota: {str(e)}",
+            "expiration": expiration_date,
+            "health_status": "ERROR"
+        }
+
+    except Exception as e:
+        # CASO ERROR DESCONOCIDO: Atrapa cualquier otro error de Python para que la Lambda nunca se cuelgue
+        end_time = time.perf_counter()
+        latency_ms = round((end_time - start_time) * 1000)
+        return {
+            "url": url,
+            "timestamp": actual_time,
+            "nombre": name,
+            "status": 0,
+            "latencia": latency_ms,
+            "mensaje_http": f"Error interno inesperado: {str(e)}",
             "expiration": expiration_date,
             "health_status": "ERROR"
         }
@@ -105,7 +140,7 @@ def save_to_dynamodb(data):
         )
 
         # Éxito, la web se ha guardado correctamente con sus nuevos valores
-        logger.info(f"Exito: {data['nombre']} guardado correctamente.")
+        logger.info(f"web: {data['nombre']} - Guardada correctamente en base de datos.")
         return True
     
     # Error de AWS
@@ -132,7 +167,7 @@ def send_alert(nombre_web, mensaje_error, topic_arn):
             f"Alerta del Watchdog\n"
             f"Se ha detectado un problema con la web: {nombre_web}\n"
             f"Detalle del error: {mensaje_error}\n"
-            f"Revisa el panel de control de informacion para mas informacion."
+            f"Revisa el panel de control para mas información."
         )
 
         response = sns_client.publish(
@@ -214,18 +249,18 @@ def lambda_handler(event, context):
         # Guardamos en dynamodb
         saved = save_to_dynamodb(result)
 
-        status_http = result.get('status')
+        current_status = result.get('health_status')
 
-        if status_http != 200:
-            logger.warning(f"¡Caída detectada en {web['nombre']}! Status: {status_http}")
+        if current_status == 'ERROR':
+            logger.warning(f"¡Caída detectada en {web['nombre']}!")
 
             if topic_arn:
-                error_msg = result.get('mensaje_http', f"Código HTTP inesperado: {status_http}")
+                error_msg = result.get('mensaje_http', f"Código HTTP inesperado: {current_status}")
                 send_alert(web['nombre'], error_msg, topic_arn)
     
     logger.info("Ejecucion del Watchdog finalizada correctamente.")
 
-    # Para que AWS marqué la ejecución de la lambda como exitosa en las métricas
+    # Para que AWS marque la ejecución de la lambda como exitosa en las métricas
     return {
         'statusCode': 200,
         'body': 'Chequeo de webs completado.'

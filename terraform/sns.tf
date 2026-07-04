@@ -1,15 +1,20 @@
+# ============================================================================
+#                  SNS (Simple Notification Service)
+# ============================================================================
 
-#---------------------------------------------------------------
-#             SNS (Simple Notification Service)
-#---------------------------------------------------------------
 
-
-# Tema para las alertas lanzadas por el sistema Watchdog
+# ============================================================================
+# TÓPICO DE SNS PARA ALERTAS
+# Tópico para enviar alertas por email cuando una web esté caída 
+# ============================================================================
 resource "aws_sns_topic" "watchdog_alerts" {
     name = "${var.project_name}-downtime-alerts-topic"
 }
 
-# Subscripción de email para el tema
+
+# ============================================================================
+# SUSCRIPCIÓN DE EMAIL PARA ALERTAS
+# ============================================================================
 resource "aws_sns_topic_subscription" "email_alert" {
     topic_arn = aws_sns_topic.watchdog_alerts.arn
     protocol = "email"

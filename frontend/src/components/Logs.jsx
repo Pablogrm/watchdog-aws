@@ -22,8 +22,16 @@ function Logs() {
         if (healthFilter) {
           targetUrl += `?health_status=${healthFilter}`;
         }
+
         const response = await axios.get(targetUrl);
-        setLogs(response.data);
+        // Ordenar cronológicamente para la gráfica (De más antiguo a más nuevo: a - b)
+        // Los [...] fuerzan a React a crear una lista nueva y repintar la tabla sí o sí
+        const sortedLogs = [...response.data].sort((a, b) => {
+          if (b.timestamp < a.timestamp) return -1;
+          if (b.timestamp > a.timestamp) return 1;
+          return 0;
+        });
+        setLogs(sortedLogs);
       } catch (error) {
         console.error("API Error fetching logs:", error);
       } finally {

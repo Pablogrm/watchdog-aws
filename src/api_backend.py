@@ -1,17 +1,32 @@
 import json
+import os
 import boto3
 import logging
+from decimal import Decimal
 from boto3.dynamodb.conditions import Key
 from botocore.exceptions import ClientError
 
 # Conexion a nuestras bases de datos DynamoDB
 dynamodb = boto3.resource('dynamodb')
-TABLE_LOGS = dynamodb.Table('websites_logs')
-TABLE_INVENTORY = dynamodb.Table('websites_inventory')
+TABLE_INVENTORY = dynamodb.Table(os.environ['TABLE_INVENTORY']) # Usamos la variable de entorno para obtener el nombre de la tabla de inventario 
+TABLE_LOGS = dynamodb.Table(os.environ['TABLE_LOGS'])           # y lo convertimos a un objeto de tabla de DynamoDB para poder hacer operaciones CRUD
 
 # Configurar el logger para Cloudwatch Logs
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
+
+# Clase para enseñar a json.dumps cómo manejar los números de DynamoDB (convertir Decimal a int o float según corresponda)
+class DecimalEncoder(json.JSONEncoder):
+    def default(self, obj):
+        if isinstance(obj, Decimal):
+            # Si no tiene decimales, lo devuelve como int (ej. 200)
+            if obj % 1 == 0:
+                return int(obj)
+            # Si tiene decimales, lo devuelve como float (ej. 45.5)
+            else:
+                return float(obj)
+        return super(DecimalEncoder, self).default(obj)
+
 
 def lambda_handler(event, context):
     http_method = event.get('httpMethod')
@@ -20,8 +35,11 @@ def lambda_handler(event, context):
     # Extraemos los parámetros de la URL (ej. ?url=... o ?status=...)
     query_params = event.get('queryStringParameters') or {}
 
+    # Leemos la URL del frontend desde las variables de entorno para configurar CORS, si no está definida permitimos todas las URLs (usando '*').
+    frontend_url = os.environ.get('FRONTEND_URL', '*')
+
     headers = {
-        'Access-Control-Allow-Origin': '*', # Poner la url del frontend una vez se implemente
+        'Access-Control-Allow-Origin': frontend_url,
         'Access-Control-Allow-Headers': 'Content-Type',
         'Access-Control-Allow-Methods': 'OPTIONS,POST,GET,DELETE'
     }
@@ -43,7 +61,7 @@ def lambda_handler(event, context):
                 return {
                     'statusCode': 200,
                     'headers': headers,
-                    'body': json.dumps(TABLE_INVENTORY.scan().get('Items', []))
+                    'body': json.dumps(TABLE_INVENTORY.scan().get('Items', []), cls=DecimalEncoder)
                 }
             
             # 2. POST: Añadir una web nueva
@@ -68,12 +86,12 @@ def lambda_handler(event, context):
                 
                 TABLE_INVENTORY.delete_item(Key={'url': url_to_delete})
                 logger.info(f"Web {url_to_delete} eliminada del inventario.")
-                return {'statusCode': 200,
-                        'headers': headers,
-                        'body': json.dumps({'msg': f'Web {url_to_delete} eliminada'})
+                return {
+                    'statusCode': 200,
+                    'headers': headers,
+                    'body': json.dumps({'msg': f'Web {url_to_delete} eliminada'})
                 }
                 
-
         
         # RUTA: /logs (Visualización y Filtros con GSI)
         elif path == '/logs':
@@ -81,24 +99,17 @@ def lambda_handler(event, context):
             # 1. GET
             if http_method == 'GET':
                 url_filter = query_params.get('url')
-                status_filter = query_params.get('health_status')
+                status_filter = query_params.get('health_status') # Puede ser 'OK' o 'ERROR'
 
-                # CASO 1: Filtrando por URL específica
-                if url_filter:
-                    logger.info(f"Filtrando logs de la url {url_filter}.")
-                    response = TABLE_LOGS.query(
-                        KeyConditionExpression=Key('url').eq(url_filter)
-                    )
-
-                # CASO 2: Filtrando por health_status, usamos el GSI (StatusIndex)
-                elif status_filter:
+                # CASO 1: Filtrando por health_status, usamos el GSI (StatusIndex)
+                if status_filter: # Si se ha especificado un filtro de estado, va a ser 'ERROR' debido a que en el frontend solo mostramos esa opción, pero lo dejamos abierto por si en un futuro queremos filtrar también por 'OK'
                     logger.info(f"Filtrando logs por health_status (OK/ERROR): {status_filter} usando GSI.")
                     response = TABLE_LOGS.query(
                         IndexName='StatusIndex',
                         KeyConditionExpression=Key('health_status').eq(status_filter)
                     )
 
-                # CASO 3: Si no hay filtro devolvemos todos los logs
+                # CASO 2: Si no hay filtro devolvemos todos los logs
                 else:
                     logger.info(f"Devolviendo todos los logs...")
                     response = TABLE_LOGS.scan()
@@ -106,9 +117,22 @@ def lambda_handler(event, context):
                 return {
                     'statusCode': 200,
                     'headers': headers,
-                    'body': json.dumps(response.get('Items', []))
+                    'body': json.dumps(response.get('Items', []), cls=DecimalEncoder)
                 }
         
+
+        # RUTA: /interval (Configuración del Intervalo de Chequeo)
+        elif path == '/interval':
+            if http_method == 'GET':
+                # Leemos la variable inyectada dinamicamente (Si no existe, devuelve '5')
+                intervalo = os.environ.get('WATCHDOG_INTERVAL', '5')
+                
+                return {
+                    'statusCode': 200,
+                    'headers': headers,
+                    'body': json.dumps({'intervalo': intervalo})
+                }
+
         # RUTA: No existe (ej. /usuarios)
         return {
             'statusCode': 404, 

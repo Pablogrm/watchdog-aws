@@ -1,9 +1,12 @@
-#---------------------------------------------------------------
-#                          MAIN
-#---------------------------------------------------------------
+# ============================================================================
+#                                 MAIN
+# ============================================================================
 
 
-# Configuración de Terraform para la infraestructura AWS 
+# ============================================================================
+# CONFIGURACIÓN DE TERRAFORM
+# Especificamos la versión mínima de Terraform y el proveedor de AWS
+# ============================================================================
 terraform {
     required_version = ">= 1.14.0"
 
@@ -15,7 +18,11 @@ terraform {
     }
 }
 
-# Configuración del proveedor AWS
+
+# ============================================================================
+# CONFIGURACIÓN DEL PROVEEDOR AWS
+# Especificamos la región y las etiquetas globales para los recursos
+# ============================================================================
 provider "aws" {
     region = var.aws_region
 

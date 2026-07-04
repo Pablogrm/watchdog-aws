@@ -13,12 +13,15 @@ function Dashboard() {
   // Estados
   const [inventory, setInventory] = useState([]);
   const [chartData, setChartData] = useState([]);
+  const [allLogs, setAllLogs] = useState([]);
+ const [lambdaInterval, setLambdaInterval] = useState(5);
   const [activeAlerts, setActiveAlerts] = useState(0);
   
-  // Estados del Modal
+  // Estados del Modal para añadir nueva web
   const [showAddModal, setShowAddModal] = useState(false);
   const [newWebName, setNewWebName] = useState('');
   const [newWebUrl, setNewWebUrl] = useState('');
+
 
   // --- 1. Petición para la tabla de Inventario ---
   const fetchInventory = async () => {
@@ -30,44 +33,78 @@ function Dashboard() {
     }
   };
 
-  // --- 2. Petición para la Gráfica y Tarjeta de Alertas ---
+
+  // --- 2. Petición para la Gráfica de Rendimiento ---
   const fetchPerformanceData = async () => {
     try {
       const response = await axios.get(`${API_URL}/logs`);
-      const logsData = response.data;
-
-      // Ordenar cronológicamente para la gráfica
-      const sortedLogs = [...logsData].sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+      // Ordenar cronológicamente para la gráfica (De más antiguo a más nuevo: a - b)
+      const sortedLogs = response.data.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
       
       const formattedChartData = sortedLogs.slice(-20).map(log => ({
-        time: log.timestamp.substring(11, 16),
+        time: log.timestamp.substring(11, 19) + ' - ' + log.nombre,
         latency: log.latencia || 0
       }));
+
       setChartData(formattedChartData);
+      setAllLogs(sortedLogs); // Guardamos todos los logs en el estado para que el useEffect los analice
 
-      // Calcular cuántas webs distintas están fallando extrayendo su health_status
-      const healthStatusByUrl = {};
-      sortedLogs.forEach(log => {
-        healthStatusByUrl[log.url] = log.health_status;
-      });
-      
-      // Función matemática de Javascript para contar los errores
-      const arrayDeEstados = Object.values(healthStatusByUrl);
-      const errorsCount = arrayDeEstados.filter(estadoSalud => estadoSalud === 'ERROR').length;
-      
-      setActiveAlerts(errorsCount);
-
-    } catch (error) {
+      } catch (error) {
       console.error("Error fetching logs data:", error);
     }
   };
 
+
+  // --- 3. Petición para el Intervalo de Lambda ---
+  const fetchInterval = async () => {
+    try {
+      const response = await axios.get(`${API_URL}/interval`);
+      // Si la API responde correctamente, actualizamos el estado
+      if (response.data && response.data.intervalo) {
+        setLambdaInterval(response.data.intervalo);
+      }
+    } catch (error) {
+      console.error("Error fetching interval:", error);
+    }
+  };
+    
+
+  // --- 3. Cálculo reactivo del KPI de Alertas ---
+  // Guardamos todos los logs en un estado separado para que el useEffect pueda analizarlos junto con el inventario
+  useEffect(() => {
+    if (inventory.length > 0 && allLogs.length > 0) {
+      let errorsCount = 0;
+
+      inventory.forEach(web => {
+        // Filtramos todos los logs que pertenezcan a esta web específica
+        const webLogs = allLogs.filter(log => log.url === web.url);
+        
+        if (webLogs.length > 0) {
+          // Como están ordenados de más antiguo a más nuevo, el último de la lista es el más reciente
+          const lastLog = webLogs[webLogs.length - 1];
+          
+          if (lastLog.health_status === 'ERROR') {
+            errorsCount++;
+          }
+        }
+      });
+
+      setActiveAlerts(errorsCount);
+    } else if (inventory.length === 0) {
+      // Si el inventario está vacío, forzamos las alertas a 0
+      setActiveAlerts(0);
+    }
+  }, [inventory, allLogs]);
+
+
+  // Al cargar la página por primera vez, descargamos los datos
   useEffect(() => {
     fetchInventory();
     fetchPerformanceData();
+    fetchInterval();
   }, []);
 
-  // --- 3. FUNCIONES CRUD (Añadir / Borrar) ---
+  // --- 4. FUNCIONES CRUD (Añadir / Borrar) ---
   const handleAddWebsite = async (e) => {
     e.preventDefault();
     try {
@@ -126,7 +163,7 @@ function Dashboard() {
           <div className="bg-gray-800/90 border border-gray-700 p-6 rounded-xl shadow-xl flex justify-between items-center transition-transform hover:scale-[1.02]">
             <div>
               <h3 className="text-gray-300 text-xs font-bold uppercase tracking-widest mb-1">Lambda Interval</h3>
-              <p className="text-4xl font-black text-white">5 <span className="text-lg text-gray-500 font-bold uppercase">min</span></p>
+              <p className="text-4xl font-black text-white">{lambdaInterval} <span className="text-lg text-gray-500 font-bold uppercase">min</span></p>
             </div>
             <button onClick={() => navigate('/logs')} className="px-4 py-2 rounded-lg text-xs font-bold bg-orange-500/20 text-orange-300 border border-orange-500/30 hover:bg-orange-500/40">
               View Logs
@@ -155,7 +192,7 @@ function Dashboard() {
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={chartData}>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#4B5563" />
-                <XAxis dataKey="time" axisLine={false} tickLine={false} tick={{fill: '#D1D5DB', fontSize: 12}} dy={10} />
+                <XAxis dataKey="time" tickFormatter={(value) => value.substring(0, 8)} stroke="#9ca3af" axisLine={false} tickLine={false} tick={{fill: '#D1D5DB', fontSize: 12}} dy={10} />
                 <YAxis axisLine={false} tickLine={false} tick={{fill: '#D1D5DB', fontSize: 12}} dx={-10} />
                 <Tooltip contentStyle={{ backgroundColor: '#1F2937', borderColor: '#374151', borderRadius: '12px' }} itemStyle={{ color: '#F97316', fontWeight: 'bold' }} labelStyle={{ color: '#9CA3AF' }} />
                 <Line type="monotone" dataKey="latency" stroke="#F97316" strokeWidth={4} dot={{ r: 4, fill: '#111827', strokeWidth: 2 }} activeDot={{ r: 8, strokeWidth: 0 }} />

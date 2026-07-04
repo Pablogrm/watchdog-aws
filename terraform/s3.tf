@@ -1,13 +1,21 @@
-#---------------------------------------------------------------
+# ============================================================================
 #                       S3 BUCKET
-#---------------------------------------------------------------
+# ============================================================================
 
 
-# Usuario y región actuales para construir el nombre del bucket de forma única
+# ============================================================================
+# USUARIO Y REGIÓN ACTUAL
+# Obtenemos el ID de la cuenta y la región actual para construir nombres 
+# únicos para los recursos
+# ============================================================================
 data "aws_caller_identity" "current" {}
 data "aws_region" "current" {}
 
-# Documento de permisos para permitir que CloudFront acceda a los objetos del bucket (IAM Policy)
+
+# ============================================================================
+# DOCUMENTOS DE POLÍTICA DE IAM
+# Para permitir que CloudFront acceda a los objetos del bucket (IAM Policy)
+# ============================================================================
 data "aws_iam_policy_document" "watchdog_bucket_policy_allow_cloudfront" {
     statement {
         # Statement ID para identificar esta declaración de permisos
@@ -31,14 +39,21 @@ data "aws_iam_policy_document" "watchdog_bucket_policy_allow_cloudfront" {
 }
 
 
-# Bucket de S3 para almacenar el frontend de React (contenido estático)
+# ============================================================================
+# BUCKET DE S3
+# Para almacenar el frontend de React (contenido estático)
+# ============================================================================
 resource "aws_s3_bucket" "watchdog_bucket" {
     bucket = "${var.project_name}-bucket-${data.aws_caller_identity.current.account_id}-${data.aws_region.current.name}"
     # Para poder eliminar el bucket aunque tenga objetos dentro
     force_destroy = true
 }
 
+
+# ============================================================================
+# BLOQUEO DE ACCESO PÚBLICO AL BUCKET
 # Bloqueamos el acceso público al bucket para garantizar la seguridad
+# ============================================================================
 resource "aws_s3_bucket_public_access_block" "watchdog_bucket_public_access_block" {
     bucket = aws_s3_bucket.watchdog_bucket.id
 

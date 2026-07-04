@@ -1,9 +1,13 @@
-#---------------------------------------------------------------
-#                       CLOUDFRONT
-#---------------------------------------------------------------
+# ====================================================================
+#                        CLOUDFRONT
+# ====================================================================
 
 
-# Origin Access Control (OAC) para permitir que CloudFront acceda al bucket S3 de forma segura, evitando exponer el bucket públicamente
+# ====================================================================
+# ORIGIN ACCESS CONTROL (OAC) 
+# Para permitir que CloudFront acceda al bucket S3 de forma segura, 
+# evitando exponer el bucket públicamente
+# ====================================================================
 resource "aws_cloudfront_origin_access_control" "watchdog_oac" {
     name = "watchdog-oac"
     description = "Origin Access Control para permitir que CloudFront acceda al bucket S3"
@@ -13,7 +17,10 @@ resource "aws_cloudfront_origin_access_control" "watchdog_oac" {
 }
 
 
-# CloudFront Distribution para servir el contenido del bucket S3 
+# ====================================================================
+# CLOUDFRONT DISTRIBUTION 
+# Para servir el contenido del bucket S3 
+# ====================================================================
 resource "aws_cloudfront_distribution" "watchdog_cloudfront_distribution" {
     # Configuración del Origen (Conexión con el Bucket de S3)
     origin {
