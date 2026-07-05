@@ -4,124 +4,124 @@
 
 
 # ====================================================================
-# ROLES DE EJECUCIÓN (Trust Policies)
-# Define qué servicios de AWS están autorizados a asumir estos roles
+# EXECUTION ROLES (Trust Policies)
+# Define which AWS services are authorized to assume these roles
 # ====================================================================
 
-# --- Rol para Lambda Watchdog ---
+# --- Role for Lambda Watchdog ---
 resource "aws_iam_role" "lambda_watchdog_role" {
-    name = "lambda-watchdog-role"
+  name = "lambda-watchdog-role"
 
-    # Política de confianza: Permite estrictamente al servicio Lambda asumir este rol
-    assume_role_policy = jsonencode({
-        Version = "2012-10-17"
-        Statement = [
-            {
-                Action = "sts:AssumeRole"
-                Effect = "Allow"
-                Principal = {
-                    Service = "lambda.amazonaws.com"
-                }
-            }
-        ]
-    })
-}
-
-
-# --- Rol para Lambda API ---
-resource "aws_iam_role" "lambda_api_role" {
-    name = "lambda-api-role"
-
-    # Política de confianza: Permite estrictamente al servicio Lambda asumir este rol
-    assume_role_policy = jsonencode({
-        Version = "2012-10-17"
-        Statement = [
-            {
-                Action = "sts:AssumeRole"
-                Effect = "Allow"
-                Principal = {
-                    Service = "lambda.amazonaws.com"
-                }
-            }
-        ]
-    })
-}
-
-
-# --- Rol para EventBridge Scheduler ---
-resource "aws_iam_role" "scheduler_role" {
-    name = "eventbridge-scheduler-role"
-
-    # Política de confianza: Permite estrictamente al servicio Scheduler asumir este rol
-    assume_role_policy = jsonencode({
-        Version = "2012-10-17"
-        Statement = [
-        {
-            Action = "sts:AssumeRole"
-            Effect = "Allow"
-            Principal = {
-                Service = "scheduler.amazonaws.com"
-            }
+  # Trust Policy: Strictly allows the Lambda service to assume this role
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Action = "sts:AssumeRole"
+        Effect = "Allow"
+        Principal = {
+          Service = "lambda.amazonaws.com"
         }
-        ]
-    })
+      }
+    ]
+  })
+}
+
+
+# --- Role for Lambda API ---
+resource "aws_iam_role" "lambda_api_role" {
+  name = "lambda-api-role"
+
+  # Trust Policy: Strictly allows the Lambda service to assume this role
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Action = "sts:AssumeRole"
+        Effect = "Allow"
+        Principal = {
+          Service = "lambda.amazonaws.com"
+        }
+      }
+    ]
+  })
+}
+
+
+# --- Role for EventBridge Scheduler ---
+resource "aws_iam_role" "scheduler_role" {
+  name = "eventbridge-scheduler-role"
+
+  # Trust Policy: Strictly allows the Scheduler service to assume this role
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Action = "sts:AssumeRole"
+        Effect = "Allow"
+        Principal = {
+          Service = "scheduler.amazonaws.com"
+        }
+      }
+    ]
+  })
 }
 
 # ====================================================================
-# POLÍTICAS DE PERMISOS (Permissions Policies)
-# Define qué acciones específicas pueden realizar los roles creados
+# PERMISSIONS POLICIES (Permissions Policies)
+# Define which specific actions the created roles can perform
 # ====================================================================
 
-# --- Políticas Gestionadas (AWS Managed Policies) ---
+# --- Managed Policies (AWS Managed Policies) ---
 
-# Permisos básicos para que Lambda Watchdog pueda escribir logs en CloudWatch
+# Basic permissions for Lambda Watchdog to write logs to CloudWatch
 resource "aws_iam_role_policy_attachment" "watchdog_logs" {
-    role       = aws_iam_role.lambda_watchdog_role.name
-    policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
+  role       = aws_iam_role.lambda_watchdog_role.name
+  policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
 }
 
-# Permisos básicos para que Lambda API pueda escribir logs en CloudWatch
+# Basic permissions for Lambda API to write logs to CloudWatch
 resource "aws_iam_role_policy_attachment" "api_logs" {
-    role       = aws_iam_role.lambda_api_role.name
-    policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
+  role       = aws_iam_role.lambda_api_role.name
+  policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
 }
 
-# --- Políticas en Línea (Inline Policies) ---
+# --- Inline Policies ---
 
 # --------------------------------------------------------------------
-# POLÍTICAS PARA EL WATCHDOG
+# LAMBDA WATCHDOG POLICIES
 # --------------------------------------------------------------------
 
-# Permisos de base de datos para el Watchdog (Solo lectura en inventario, Solo escritura en logs)
+# Permissions for the Watchdog Lambda function to access DynamoDB tables
 resource "aws_iam_role_policy" "watchdog_dynamodb" {
-    name = "watchdog-dynamodb-policy"
-    role = aws_iam_role.lambda_watchdog_role.id
+  name = "watchdog-dynamodb-policy"
+  role = aws_iam_role.lambda_watchdog_role.id
 
-    policy = jsonencode({
-        Version = "2012-10-17"
-        Statement = [
-            {
-                # El Watchdog solo necesita LEER qué webs monitorizar en la tabla de inventario
-                Effect = "Allow"
-                Action = [
-                    "dynamodb:Scan",
-                    "dynamodb:GetItem"
-                ]
-                Resource = aws_dynamodb_table.websites_inventory.arn
-            },
-            {
-                # El Watchdog solo necesita ESCRIBIR los resultados del ping en la tabla de logs
-                Effect = "Allow"
-                Action = [
-                    "dynamodb:PutItem"
-                ]
-                Resource = aws_dynamodb_table.websites_logs.arn
-            }
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        # The Watchdog only needs to READ which websites to monitor in the inventory table
+        Effect = "Allow"
+        Action = [
+          "dynamodb:Scan",
+          "dynamodb:GetItem"
         ]
-    })
+        Resource = aws_dynamodb_table.websites_inventory.arn
+      },
+      {
+        # The Watchdog only needs to WRITE the ping results in the logs table
+        Effect = "Allow"
+        Action = [
+          "dynamodb:PutItem"
+        ]
+        Resource = aws_dynamodb_table.websites_logs.arn
+      }
+    ]
+  })
 }
 
-# Permisos para publicar alertas de caída de servicio (Exclusivo del Watchdog)
+# Permissions to publish service downtime alerts
 resource "aws_iam_role_policy" "watchdog_sns" {
   name = "watchdog-sns-policy"
   role = aws_iam_role.lambda_watchdog_role.id
@@ -129,74 +129,74 @@ resource "aws_iam_role_policy" "watchdog_sns" {
   policy = jsonencode({
     Version = "2012-10-17"
     Statement = [
-        {
-            Effect = "Allow"
-            Action = "sns:Publish"
-            Resource = aws_sns_topic.watchdog_alerts.arn
-        }
+      {
+        Effect   = "Allow"
+        Action   = "sns:Publish"
+        Resource = aws_sns_topic.watchdog_alerts.arn
+      }
     ]
   })
 }
 
 
 # --------------------------------------------------------------------
-# POLÍTICAS PARA LA API
+# POLICIES FOR THE API
 # --------------------------------------------------------------------
 
-# Permisos de base de datos para la API (CRUD completo en tabla de inventario, Solo lectura en tabla de logs)
+# Database permissions for the API (Full CRUD on inventory table, Read-only on logs table)
 resource "aws_iam_role_policy" "api_dynamodb" {
-    name = "api-dynamodb-policy"
-    role = aws_iam_role.lambda_api_role.id
+  name = "api-dynamodb-policy"
+  role = aws_iam_role.lambda_api_role.id
 
-    policy = jsonencode({
-        Version = "2012-10-17"
-        Statement = [
-            {
-                # La API necesita CRUD completo para gestionar el inventario de webs a monitorizar
-                Effect = "Allow"
-                Action = [
-                    "dynamodb:PutItem",
-                    "dynamodb:GetItem",
-                    "dynamodb:UpdateItem",
-                    "dynamodb:DeleteItem",
-                    "dynamodb:Scan"
-                ]
-                Resource = aws_dynamodb_table.websites_inventory.arn
-            },
-            {
-                # La API solo necesita LEER el historial para mostrarlo en React
-                Effect = "Allow"
-                Action = [
-                    "dynamodb:Scan",
-                    "dynamodb:Query"
-                ]
-                Resource = [ 
-                    aws_dynamodb_table.websites_logs.arn,
-                    "${aws_dynamodb_table.websites_logs.arn}/index/*"
-                ]    
-            }
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        # The API needs full CRUD to manage the inventory of websites to monitor
+        Effect = "Allow"
+        Action = [
+          "dynamodb:PutItem",
+          "dynamodb:GetItem",
+          "dynamodb:UpdateItem",
+          "dynamodb:DeleteItem",
+          "dynamodb:Scan"
         ]
-    })
+        Resource = aws_dynamodb_table.websites_inventory.arn
+      },
+      {
+        # The API only needs to READ the history to display it in React
+        Effect = "Allow"
+        Action = [
+          "dynamodb:Scan",
+          "dynamodb:Query"
+        ]
+        Resource = [
+          aws_dynamodb_table.websites_logs.arn,
+          "${aws_dynamodb_table.websites_logs.arn}/index/*"
+        ]
+      }
+    ]
+  })
 }
 
 
 # --------------------------------------------------------------------
-# POLÍTICAS PARA EVENTBRIDGE SCHEDULER
+# POLICIES FOR EVENTBRIDGE SCHEDULER
 # --------------------------------------------------------------------
 
-# Permisos para que EventBridge Scheduler pueda invocar la función Lambda Watchdog
-resource "aws_iam_role_policy" "scheduler_invoke_policy"{
-    name = "scheduler-invoke-lambda-policy"
-    role = aws_iam_role.scheduler_role.id
+# Permissions for EventBridge Scheduler to invoke the Lambda Watchdog function
+resource "aws_iam_role_policy" "scheduler_invoke_policy" {
+  name = "scheduler-invoke-lambda-policy"
+  role = aws_iam_role.scheduler_role.id
 
-    policy = jsonencode({
-        Version = "2012-10-17"
-        Statement = [
-            {
-                Effect = "Allow"
-                Action = "lambda:InvokeFunction"
-                Resource = aws_lambda_function.lambda_watchdog.arn
-            }
-        ]
-    })
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect   = "Allow"
+        Action   = "lambda:InvokeFunction"
+        Resource = aws_lambda_function.lambda_watchdog.arn
+      }
+    ]
+  })
 }

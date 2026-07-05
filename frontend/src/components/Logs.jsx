@@ -1,10 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
-import axios from 'axios';
 
-import logsImage from '../assets/fondo.png'; 
-
-const API_URL = import.meta.env.VITE_API_URL
+import api from '../apiClient';
+import logsImage from '../assets/fondo.png';
 
 function Logs() {
   const navigate = useNavigate();
@@ -17,56 +15,63 @@ function Logs() {
   useEffect(() => {
     const fetchLogs = async () => {
       setLoading(true);
-      try {
-        let targetUrl = `${API_URL}/logs`;
-        if (healthFilter) {
-          targetUrl += `?health_status=${healthFilter}`;
-        }
 
-        const response = await axios.get(targetUrl);
-        // Ordenar cronológicamente para la gráfica (De más antiguo a más nuevo: a - b)
-        // Los [...] fuerzan a React a crear una lista nueva y repintar la tabla sí o sí
+      try {
+        const targetUrl = healthFilter
+          ? `/logs?health_status=${encodeURIComponent(healthFilter)}`
+          : '/logs';
+
+        const response = await api.get(targetUrl);
+
         const sortedLogs = [...response.data].sort((a, b) => {
           if (b.timestamp < a.timestamp) return -1;
           if (b.timestamp > a.timestamp) return 1;
           return 0;
         });
+
         setLogs(sortedLogs);
       } catch (error) {
-        console.error("API Error fetching logs:", error);
+        console.error('API Error fetching logs:', error);
+
+        if (error.response?.status === 401 || error.response?.status === 403) {
+          navigate('/login', { replace: true });
+        }
       } finally {
         setLoading(false);
       }
     };
+
     fetchLogs();
-  }, [healthFilter]);
+  }, [healthFilter, navigate]);
 
   return (
-    <div 
+    <div
       className="min-h-screen bg-gray-900 bg-cover bg-center bg-no-repeat bg-fixed relative font-sans text-gray-100"
       style={{ backgroundImage: `url(${logsImage})` }}
     >
-      
       <div className="absolute inset-0 bg-gray-900/50"></div>
 
       <div className="relative z-10 p-8">
-        
         <div className="mb-8">
-          <button 
-            onClick={() => navigate('/dashboard')} 
+          <button
+            onClick={() => navigate('/dashboard')}
             className="text-orange-500 text-sm font-bold hover:text-orange-400 transition-colors mb-2 block"
           >
             ← Back to Dashboard
           </button>
+
           <h1 className="text-3xl font-extrabold text-white uppercase tracking-widest">
             System <span className="text-orange-500">Logs</span>
           </h1>
+
           <p className="text-gray-300 text-sm italic mt-1 font-medium">
-            {healthFilter === 'ERROR' ? 'Incident Report (GSI Filtering)' : 'Full Monitoring History'}
+            {healthFilter === 'ERROR'
+              ? 'Incident Report (GSI Filtering)'
+              : 'Full Monitoring History'}
           </p>
         </div>
 
-        {/* TABLA DE LOGS CON FONDO SEMITRANSPARENTE */}
+        {/* LOGS TABLE */}
         <div className="bg-gray-800/80 border border-gray-600 rounded-xl shadow-2xl overflow-hidden backdrop-blur-md">
           <div className="overflow-x-auto">
             <table className="w-full text-left">
@@ -75,21 +80,34 @@ function Logs() {
                   <th className="px-8 py-5 border-b border-gray-600">Time (UTC)</th>
                   <th className="px-8 py-5 border-b border-gray-600">Name</th>
                   <th className="px-8 py-5 border-b border-gray-600">URL</th>
-                  <th className="px-8 py-5 border-b border-gray-600 text-center">Status</th>
-                  <th className="px-8 py-5 border-b border-gray-600 text-center">Latency</th>
-                  <th className="px-8 py-5 border-b border-gray-600 text-right">Health</th>
+                  <th className="px-8 py-5 border-b border-gray-600 text-center">
+                    Status
+                  </th>
+                  <th className="px-8 py-5 border-b border-gray-600 text-center">
+                    Latency
+                  </th>
+                  <th className="px-8 py-5 border-b border-gray-600 text-right">
+                    Health
+                  </th>
                 </tr>
               </thead>
+
               <tbody className="divide-y divide-gray-700 text-sm">
                 {loading ? (
                   <tr>
-                    <td colSpan="6" className="px-8 py-12 text-center text-gray-100 font-bold animate-pulse text-lg">
+                    <td
+                      colSpan="6"
+                      className="px-8 py-12 text-center text-gray-100 font-bold animate-pulse text-lg"
+                    >
                       Requesting data from AWS DynamoDB...
                     </td>
                   </tr>
                 ) : logs.length === 0 ? (
                   <tr>
-                    <td colSpan="6" className="px-8 py-12 text-center text-gray-300 font-bold text-lg">
+                    <td
+                      colSpan="6"
+                      className="px-8 py-12 text-center text-gray-300 font-bold text-lg"
+                    >
                       No records found in the database.
                     </td>
                   </tr>
@@ -97,24 +115,37 @@ function Logs() {
                   logs.map((log, i) => (
                     <tr key={i} className="hover:bg-gray-700/50 transition-colors">
                       <td className="px-8 py-5 font-mono text-sm text-gray-300">
-                        {log.timestamp ? log.timestamp.substring(0, 19).replace('T', ' ') : '-'}
+                        {log.timestamp
+                          ? log.timestamp.substring(0, 19).replace('T', ' ')
+                          : '-'}
                       </td>
-                      <td className="px-8 py-5 font-bold text-white text-base">{log.nombre}</td>
-                      <td className="px-8 py-5 text-sm text-gray-300 font-medium">{log.url}</td>
+
+                      <td className="px-8 py-5 font-bold text-white text-base">
+                        {log.nombre}
+                      </td>
+
+                      <td className="px-8 py-5 text-sm text-gray-300 font-medium">
+                        {log.url}
+                      </td>
+
                       <td className="px-8 py-5 text-center font-mono font-bold text-lg">
                         <span className={log.status === 200 ? 'text-green-400' : 'text-red-400'}>
                           {log.status}
                         </span>
                       </td>
+
                       <td className="px-8 py-5 text-center font-mono text-orange-400 font-bold text-base">
                         {log.latencia}ms
                       </td>
+
                       <td className="px-8 py-5 text-right">
-                        <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-black border ${
-                          log.health_status === 'OK' 
-                            ? 'bg-green-900/40 text-green-400 border-green-500/30' 
-                            : 'bg-red-900/40 text-red-400 border-red-500/30'
-                        }`}>
+                        <span
+                          className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-black border ${
+                            log.health_status === 'OK'
+                              ? 'bg-green-900/40 text-green-400 border-green-500/30'
+                              : 'bg-red-900/40 text-red-400 border-red-500/30'
+                          }`}
+                        >
                           {log.health_status}
                         </span>
                       </td>

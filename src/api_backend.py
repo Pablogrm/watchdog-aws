@@ -6,23 +6,23 @@ from decimal import Decimal
 from boto3.dynamodb.conditions import Key
 from botocore.exceptions import ClientError
 
-# Conexion a nuestras bases de datos DynamoDB
+# Connection to our DynamoDB databases
 dynamodb = boto3.resource('dynamodb')
-TABLE_INVENTORY = dynamodb.Table(os.environ['TABLE_INVENTORY']) # Usamos la variable de entorno para obtener el nombre de la tabla de inventario 
-TABLE_LOGS = dynamodb.Table(os.environ['TABLE_LOGS'])           # y lo convertimos a un objeto de tabla de DynamoDB para poder hacer operaciones CRUD
+TABLE_INVENTORY = dynamodb.Table(os.environ['TABLE_INVENTORY']) # We use the environment variable to get the inventory table name
+TABLE_LOGS = dynamodb.Table(os.environ['TABLE_LOGS'])           # and convert it to a DynamoDB table object to perform CRUD operations
 
-# Configurar el logger para Cloudwatch Logs
+# Configure logger for CloudWatch Logs
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 
-# Clase para enseñar a json.dumps cómo manejar los números de DynamoDB (convertir Decimal a int o float según corresponda)
+# Class to teach json.dumps how to handle DynamoDB numbers (convert Decimal to int or float as appropriate)
 class DecimalEncoder(json.JSONEncoder):
     def default(self, obj):
         if isinstance(obj, Decimal):
-            # Si no tiene decimales, lo devuelve como int (ej. 200)
+            # If it has no decimals, return it as int (e.g. 200)
             if obj % 1 == 0:
                 return int(obj)
-            # Si tiene decimales, lo devuelve como float (ej. 45.5)
+            # If it has decimals, return it as float (e.g. 45.5)
             else:
                 return float(obj)
         return super(DecimalEncoder, self).default(obj)
@@ -32,19 +32,25 @@ def lambda_handler(event, context):
     http_method = event.get('httpMethod')
     path = event.get('resource')
 
-    # Extraemos los parámetros de la URL (ej. ?url=... o ?status=...)
+    # Extract URL parameters (e.g. ?url=... or ?status=...)
     query_params = event.get('queryStringParameters') or {}
 
-    # Leemos la URL del frontend desde las variables de entorno para configurar CORS, si no está definida permitimos todas las URLs (usando '*').
-    frontend_url = os.environ.get('FRONTEND_URL', '*')
+    # Read frontend URL from environment variables to configure CORS, if not defined we allow all URLs (using '*').
+    frontend_url = os.environ['FRONTEND_URL']
 
     headers = {
         'Access-Control-Allow-Origin': frontend_url,
-        'Access-Control-Allow-Headers': 'Content-Type',
+        'Access-Control-Allow-Headers': 'Content-Type, Authorization',
         'Access-Control-Allow-Methods': 'OPTIONS,POST,GET,DELETE'
     }
 
-    # Atendemos primero al OPTIONS de CORS
+    claims = event.get('requestContext', {}).get('authorizer', {}).get('claims', {})
+    user_sub = claims.get('sub')
+    user_email = claims.get('email')
+
+    logger.info(f"Authenticated user: {user_email} - {user_sub}")
+
+    # Handle CORS OPTIONS request first
     if http_method == 'OPTIONS':
         return {
             'statusCode': 200,
@@ -53,10 +59,10 @@ def lambda_handler(event, context):
         }
     
     try:
-        # RUTA: /webs (Gestión de Inventario)
+        # ROUTE: /webs (Inventory Management)
         if path == '/webs':
 
-            # 1. GET: Listar todas las webs
+            # 1. GET: List all websites
             if http_method == 'GET':
                 return {
                     'statusCode': 200,
@@ -64,54 +70,54 @@ def lambda_handler(event, context):
                     'body': json.dumps(TABLE_INVENTORY.scan().get('Items', []), cls=DecimalEncoder)
                 }
             
-            # 2. POST: Añadir una web nueva
+            # 2. POST: Add a new website
             elif http_method == 'POST':
                 body = json.loads(event.get('body', '{}'))
                 TABLE_INVENTORY.put_item(Item={'url': body['url'], 'nombre': body['nombre']})
                 return {
                     'statusCode': 201,
                     'headers': headers,
-                    'body': json.dumps({'msg': 'Web añadida'})
+                    'body': json.dumps({'msg': 'Website added'})
                 }
             
-            # 3. DELETE: Eliminar una web del inventario
+            # 3. DELETE: Delete a website from inventory
             elif http_method == 'DELETE':
                 url_to_delete = query_params.get('url')
                 if not url_to_delete:
                     return {
                         'statusCode': 400,
                         'headers': headers, 
-                        'body': json.dumps({'error': 'Falta la URL a borrar'})
+                        'body': json.dumps({'error': 'Missing URL to delete'})
                     }
                 
                 TABLE_INVENTORY.delete_item(Key={'url': url_to_delete})
-                logger.info(f"Web {url_to_delete} eliminada del inventario.")
+                logger.info(f"Website {url_to_delete} deleted from inventory.")
                 return {
                     'statusCode': 200,
                     'headers': headers,
-                    'body': json.dumps({'msg': f'Web {url_to_delete} eliminada'})
+                    'body': json.dumps({'msg': f'Website {url_to_delete} deleted'})
                 }
                 
         
-        # RUTA: /logs (Visualización y Filtros con GSI)
+        # ROUTE: /logs (Display and Filters with GSI)
         elif path == '/logs':
 
             # 1. GET
             if http_method == 'GET':
                 url_filter = query_params.get('url')
-                status_filter = query_params.get('health_status') # Puede ser 'OK' o 'ERROR'
+                status_filter = query_params.get('health_status') # Can be 'OK' or 'ERROR'
 
-                # CASO 1: Filtrando por health_status, usamos el GSI (StatusIndex)
-                if status_filter: # Si se ha especificado un filtro de estado, va a ser 'ERROR' debido a que en el frontend solo mostramos esa opción, pero lo dejamos abierto por si en un futuro queremos filtrar también por 'OK'
-                    logger.info(f"Filtrando logs por health_status (OK/ERROR): {status_filter} usando GSI.")
+                # CASE 1: Filter by health_status, using GSI (StatusIndex)
+                if status_filter: # If a status filter has been specified, it will be 'ERROR' because in the frontend we only show that option, but we leave it open in case in the future we want to filter by 'OK' as well
+                    logger.info(f"Filtering logs by health_status (OK/ERROR): {status_filter} using GSI.")
                     response = TABLE_LOGS.query(
                         IndexName='StatusIndex',
                         KeyConditionExpression=Key('health_status').eq(status_filter)
                     )
 
-                # CASO 2: Si no hay filtro devolvemos todos los logs
+                # CASE 2: If there is no filter, return all logs
                 else:
-                    logger.info(f"Devolviendo todos los logs...")
+                    logger.info(f"Returning all logs...")
                     response = TABLE_LOGS.scan()
 
                 return {
@@ -121,10 +127,10 @@ def lambda_handler(event, context):
                 }
         
 
-        # RUTA: /interval (Configuración del Intervalo de Chequeo)
+        # ROUTE: /interval (Monitoring Interval Configuration)
         elif path == '/interval':
             if http_method == 'GET':
-                # Leemos la variable inyectada dinamicamente (Si no existe, devuelve '5')
+                # Read the dynamically injected variable (If it doesn't exist, return '5')
                 intervalo = os.environ.get('WATCHDOG_INTERVAL', '5')
                 
                 return {
@@ -133,7 +139,7 @@ def lambda_handler(event, context):
                     'body': json.dumps({'intervalo': intervalo})
                 }
 
-        # RUTA: No existe (ej. /usuarios)
+        # ROUTE: Does not exist (e.g. /users)
         return {
             'statusCode': 404, 
             'headers': headers, 
@@ -142,18 +148,18 @@ def lambda_handler(event, context):
     except ClientError as e:
         error_code = e.response['Error']['Code']
         error_msg = e.response['Error']['Message']
-        logger.error(f"Fallo de Amazon DynamoDB. Código: {error_code} - {error_msg}")
+        logger.error(f"Amazon DynamoDB failure. Code: {error_code} - {error_msg}")
         return {
             'statusCode': 500,
             'headers': headers,
-            'body': json.dumps({'error': 'Fallo en base de datos'})
+            'body': json.dumps({'error': 'Database failure'})
         }
 
     except Exception as e:
-        # logger.exception muestra debajo toda la traza del error (linea de codigo donde falla, etc)
-        logger.exception(f"Error interno en el código: {e}")
+        # logger.exception displays the full error trace (line of code that fails, etc.)
+        logger.exception(f"Internal code error: {e}")
         return {'statusCode': 500,
                 'headers': headers,
-                'body': json.dumps({'error': 'Error interno'})
+                'body': json.dumps({'error': 'Internal error'})
         }
 
