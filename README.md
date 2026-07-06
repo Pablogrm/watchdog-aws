@@ -66,6 +66,14 @@ The project was designed as a serverless AWS application where infrastructure is
 
 ## Architecture
 
+The diagram below summarizes the AWS serverless architecture used by the project:
+
+<p align="center">
+  <img src="docs/architecture.png" alt="Serverless Watchdog AWS architecture" width="900"/>
+</p>
+
+The simplified runtime flow is:
+
 ```text
 User
   |
@@ -156,7 +164,11 @@ Watchdog Lambda
 
 ```text
 watchdog-aws/
+├── docs/
+│   └── architecture.png
+│
 ├── frontend/
+│   ├── public/
 │   ├── src/
 │   │   ├── assets/
 │   │   ├── components/
@@ -170,6 +182,8 @@ watchdog-aws/
 │   │   ├── index.css
 │   │   └── main.jsx
 │   ├── .env.example
+│   ├── eslint.config.js
+│   ├── index.html
 │   ├── package.json
 │   ├── package-lock.json
 │   └── vite.config.js
@@ -587,15 +601,14 @@ The user may not be confirmed yet. Confirm the account using the code sent by em
 Potential future improvements:
 
 - Send alerts directly to each authenticated user's email address.
-- Store website ownership using Cognito `sub`.
+- Migrate the monitoring component to a multi-region architecture to reduce false positives caused by local network or regional connectivity issues.
 - Redesign DynamoDB keys for full multi-user isolation.
 - Add password reset flow.
 - Add user profile management.
 - Add custom domains for CloudFront and API Gateway.
 - Add CI/CD with GitHub Actions.
 - Add automated tests for frontend and Lambda code.
-- Add CloudWatch dashboards and alarms.
-- Add SES-based transactional email alerts.
+
 
 ---
 
