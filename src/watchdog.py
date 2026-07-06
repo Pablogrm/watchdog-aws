@@ -8,47 +8,47 @@ import boto3
 import logging
 import os
 
-# Conexion a nuestras bases de datos DynamoDB
+# Connection to our DynamoDB databases
 dynamodb = boto3.resource('dynamodb')
-TABLE_INVENTORY = dynamodb.Table(os.environ.get('TABLE_INVENTORY')) # Usamos la variable de entorno para obtener el nombre de la tabla de inventario 
-TABLE_LOGS = dynamodb.Table(os.environ.get('TABLE_LOGS'))           # y lo convertimos a un objeto de tabla de DynamoDB para poder hacer operaciones CRUD
+TABLE_INVENTORY = dynamodb.Table(os.environ.get('TABLE_INVENTORY')) # We use the environment variable to get the inventory table name
+TABLE_LOGS = dynamodb.Table(os.environ.get('TABLE_LOGS'))           # and convert it to a DynamoDB table object to perform CRUD operations
 
-# Conexion a SNS
+# Connection to SNS
 sns_client = boto3.client('sns')
 
-# Configurar el logger para Cloudwatch Logs
+# Configure logger for CloudWatch Logs
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 
 
 
-# Funcion que realiza un ping a una web
+# Function that pings a website
 def check_website(url, name):
     actual_time = datetime.now(timezone.utc).isoformat()
 
-    # Calculamos el TTL (7 días en el futuro en formato Unix Epoch): 7 días * 24h * 60m * 60s = 604800 segundos
+    # Calculate TTL (7 days in the future in Unix Epoch format): 7 days * 24h * 60m * 60s = 604800 seconds
     expiration_date = int(time.time()) + 604800
 
-    # Empezamos a contar el tiempo de latencia
+    # Start counting latency time
     start_time = time.perf_counter()
 
-    # Añadimos un User-Agent falso haciéndonos pasar por Google Chrome en Windows
+    # Add a fake User-Agent to impersonate Google Chrome on Windows
     headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'}
     req = Request(url, headers=headers)
   
     try:
-        # Intento de llegar al endpoint con timeout = 7 segundos
+        # Attempt to reach the endpoint with timeout = 7 seconds
         response = urlopen(req, timeout=7)
         end_time = time.perf_counter()
         
-        # Se calcula la latencia en ms y se redondea al entero mas proximo para evitar tener muchos decimales
+        # Calculate latency in ms and round to nearest integer to avoid many decimals
         latency_ms = round((end_time - start_time) * 1000)
         
-        # Recuperamos el codigo HTTP y la respuesta
+        # Get HTTP code and response
         code = response.getcode()
         reason = response.reason
 
-        # CASO EXITO (ej. 200 OK)
+        # SUCCESS CASE (e.g. 200 OK)
         return{
             "url": url,
             "timestamp": actual_time,
@@ -61,8 +61,8 @@ def check_website(url, name):
         }
     
     except HTTPError as e:
-        # CASO ERROR DE SERVIDOR (ej. 404 Not Found, 500 Internal Server Error)
-        # El servidor responde pero con error
+        # SERVER ERROR CASE (e.g. 404 Not Found, 500 Internal Server Error)
+        # Server responds but with error
         end_time = time.perf_counter()
         latency_ms = round((end_time - start_time) * 1000)
         return {
@@ -77,8 +77,8 @@ def check_website(url, name):
         }
 
     except URLError as e:
-        # CASO DE FALLO DE ENRUTAMIENTO (ej. DNS Failure, URL mal escrita, Connection Timeout o Connection Refused)
-        # No hay respuesta HTTP, forzamos status a 0
+        # ROUTING FAILURE CASE (e.g. DNS Failure, Wrong URL, Connection Timeout or Connection Refused)
+        # No HTTP response, force status to 0
         end_time = time.perf_counter()
         latency_ms = round((end_time - start_time) * 1000)
         return {
@@ -87,13 +87,13 @@ def check_website(url, name):
             "nombre": name,
             "status": 0,
             "latencia": latency_ms,
-            "mensaje_http": f"Conexion fallida: {e.reason}",
+            "mensaje_http": f"Connection failed: {e.reason}",
             "expiration": expiration_date,
             "health_status": "ERROR"
         }
     
     except http.client.RemoteDisconnected as e:
-        # CASO ERROR DE DESCONEXIÓN REMOTA (ej. el servidor cierra la conexión antes de responder)
+        # REMOTE DISCONNECTION ERROR CASE (e.g. server closes connection before responding)
         end_time = time.perf_counter()
         latency_ms = round((end_time - start_time) * 1000)
         return {
@@ -102,13 +102,13 @@ def check_website(url, name):
             "nombre": name,
             "status": 0,
             "latencia": latency_ms,
-            "mensaje_http": f"Desconexión remota: {str(e)}",
+            "mensaje_http": f"Remote disconnection: {str(e)}",
             "expiration": expiration_date,
             "health_status": "ERROR"
         }
 
     except Exception as e:
-        # CASO ERROR DESCONOCIDO: Atrapa cualquier otro error de Python para que la Lambda nunca se cuelgue
+        # UNKNOWN ERROR CASE: Catches any other Python error so Lambda never hangs
         end_time = time.perf_counter()
         latency_ms = round((end_time - start_time) * 1000)
         return {
@@ -117,14 +117,14 @@ def check_website(url, name):
             "nombre": name,
             "status": 0,
             "latencia": latency_ms,
-            "mensaje_http": f"Error interno inesperado: {str(e)}",
+            "mensaje_http": f"Unexpected internal error: {str(e)}",
             "expiration": expiration_date,
             "health_status": "ERROR"
         }
 
 
 
-# Función para guardar el ping realizado por lambda cuando EventBridge la despierta
+# Function to save the ping performed by lambda when EventBridge wakes it up
 def save_to_dynamodb(data):
     try:
         response = TABLE_LOGS.put_item(
@@ -139,131 +139,131 @@ def save_to_dynamodb(data):
             }
         )
 
-        # Éxito, la web se ha guardado correctamente con sus nuevos valores
-        logger.info(f"web: {data['nombre']} - Guardada correctamente en base de datos.")
+        # Success, the website has been saved correctly with its new values
+        logger.info(f"web: {data['nombre']} - Saved correctly in database.")
         return True
     
-    # Error de AWS
+    # AWS error
     except ClientError as e:
         error_code = e.response['Error']['Code']
         error_msg = e.response['Error']['Message']
         
-        logger.error(f"Fallo de AWS al intentar guardar {data['nombre']}. Código: {error_code} - {error_msg}")
+        logger.error(f"AWS failure when trying to save {data['nombre']}. Code: {error_code} - {error_msg}")
         return False
     
-    # Error genérico
+    # Generic error
     except Exception as e:
-        # Intentamos sacar el nombre. Si no existe, usamos "la web" por defecto.
-        nombre_web = data.get('nombre', 'la web')
-        # logger.exception muestra debajo toda la traza del error (linea de codigo donde falla, etc)
-        logger.exception(f"Error interno en el código. No se pudo procesar {nombre_web}.")
+        # Try to get the name. If it doesn't exist, use "the website" by default.
+        nombre_web = data.get('nombre', 'the website')
+        # logger.exception displays the full error trace (line of code that fails, etc.)
+        logger.exception(f"Internal code error. Could not process {nombre_web}.")
         return False
 
 
-# Función para enviar una notificación a un tema de SNS
+# Function to send a notification to an SNS topic
 def send_alert(nombre_web, mensaje_error, topic_arn):
     try:
         mensaje = (
-            f"Alerta del Watchdog\n"
-            f"Se ha detectado un problema con la web: {nombre_web}\n"
-            f"Detalle del error: {mensaje_error}\n"
-            f"Revisa el panel de control para mas información."
+            f"Watchdog Alert\n"
+            f"A problem has been detected with the website: {nombre_web}\n"
+            f"Error detail: {mensaje_error}\n"
+            f"Check the control panel for more information."
         )
 
         response = sns_client.publish(
             TopicArn=topic_arn,
             Message=mensaje,
-            Subject=f"CAÍDA DETECTADA: {nombre_web}" # El asunto del correo
+            Subject=f"DOWNTIME DETECTED: {nombre_web}" # Email subject
         )
 
-        logger.info(f"Exito: Alerta SNS enviada para {nombre_web}. ID: {response['MessageId']}.")
+        logger.info(f"Success: SNS alert sent for {nombre_web}. ID: {response['MessageId']}.")
         return True
     
     except ClientError as e:
-        # Errores donde AWS rechaza la petición
+        # Errors where AWS rejects the request
         error_code = e.response['Error']['Code']
         error_msg = e.response['Error']['Message']
-        logger.error(f"AWS rechazó enviar alerta SNS para {nombre_web}. Código: {error_code} - {error_msg}.")
+        logger.error(f"AWS rejected sending SNS alert for {nombre_web}. Code: {error_code} - {error_msg}.")
         return False
         
     except Exception as e:
-        # Cualquier otro error (fallos de red, variables nulas...)
-        logger.exception(f"Error interno en el código. No se pudo enviar la alerta SNS para {nombre_web}.")
+        # Any other error (network failures, null variables...)
+        logger.exception(f"Internal code error. Could not send SNS alert for {nombre_web}.")
         return False
     
 
 
-# Función para escanear la base de datos y coger las urls que hay que checkear
+# Function to scan the database and get the URLs to check
 def get_websites_to_check():
     try:
-        # Escaneamos la Tabla Inventario (con solo una aparición por url)
+        # Scan the Inventory Table (with only one occurrence per URL)
         response = TABLE_INVENTORY.scan()
         items = response.get('Items', [])
 
         webs = []
 
-        # Formateamos la salida por si alguna web no tuviese nombre
+        # Format the output in case any website doesn't have a name
         for item in items:
             if 'url' in item:
                 webs.append({
                     'url': item['url'],
-                    'nombre': item.get('nombre', 'Web sin nombre')
+                    'nombre': item.get('nombre', 'Website without name')
                 })
             else:
-                logger.warning(f"Se encontró un registro sin url en la base de datos: {item}.")
+                logger.warning(f"Found a record without url in the database: {item}.")
         
-        logger.info(f"Se han obtenido {len(webs)} de la base de datos para revisar.")
+        logger.info(f"Retrieved {len(webs)} websites from the database for review.")
         return webs
     
     except ClientError as e:
         error_code = e.response['Error']['Code']
         error_msg = e.response['Error']['Message']
-        logger.error(f"Fallo de AWS al hacer scan en la tabla de inventario. Código: {error_code} - {error_msg}.")
+        logger.error(f"AWS failure when scanning inventory table. Code: {error_code} - {error_msg}.")
         return []
         
     except Exception as e:
-        logger.exception("Fallo interno al procesar las webs de la base de datos.")
+        logger.exception("Internal failure when processing websites from database.")
         return []
 
 
 
-# Función principal, recorre la base de datos y chequea las webs enviando alerta si alguna ha caído
+# Main function, iterates through the database and checks websites, sending alert if any has fallen
 def lambda_handler(event, context):
     
-    logger.info("Iniciando ejecución del Watchdog...")
+    logger.info("Starting Watchdog execution...")
     
-    # Recuperamos el ARN del tema SNS desde las variables de entorno
+    # Get SNS topic ARN from environment variables
     topic_arn = os.environ.get('SNS_TOPIC_ARN')
     if not topic_arn:
-        logger.warning("No se encontró la variable de entorno SNS_TOPIC_ARN. Las alertas no se enviarán.")
+        logger.warning("SNS_TOPIC_ARN environment variable not found. Alerts will not be sent.")
 
     websites_to_check = get_websites_to_check()
 
     for web in websites_to_check:
 
-        logger.info(f"Chequeando: {web['nombre']}...")
+        logger.info(f"Checking: {web['nombre']}...")
 
-        # Hacemos el ping
+        # Do the ping
         result = check_website(web['url'], web['nombre'])
 
-        # Guardamos en dynamodb
+        # Save to dynamodb
         saved = save_to_dynamodb(result)
 
         current_status = result.get('health_status')
 
         if current_status == 'ERROR':
-            logger.warning(f"¡Caída detectada en {web['nombre']}!")
+            logger.warning(f"Downtime detected in {web['nombre']}!")
 
             if topic_arn:
-                error_msg = result.get('mensaje_http', f"Código HTTP inesperado: {current_status}")
+                error_msg = result.get('mensaje_http', f"Unexpected HTTP code: {current_status}")
                 send_alert(web['nombre'], error_msg, topic_arn)
     
-    logger.info("Ejecucion del Watchdog finalizada correctamente.")
+    logger.info("Watchdog execution completed successfully.")
 
-    # Para que AWS marque la ejecución de la lambda como exitosa en las métricas
+    # For AWS to mark lambda execution as successful in metrics
     return {
         'statusCode': 200,
-        'body': 'Chequeo de webs completado.'
+        'body': 'Website check completed.'
     }
 
 
